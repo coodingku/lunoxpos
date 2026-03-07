@@ -194,23 +194,45 @@
             }
         }
 
-   function initRealtimeSubscription() {
+ function initRealtimeSubscription() {
     console.log("Memulai Koneksi Realtime...");
     
     _supabase.channel('update-order')
         .on('postgres_changes', 
-            { event: '*', schema: 'public', table: 'orders' }, 
-            (payload) => {
-                console.log("Perubahan terdeteksi!", payload);
-                // Langsung panggil fungsi load data agar tampilan Admin segar kembali
+            { event: 'INSERT', schema: 'public', table: 'orders' }, 
+            async (payload) => {
+                console.log("Order Baru Masuk:", payload);
+                
+                // 1. Refresh tampilan list order
                 loadActiveOrders(); 
                 
-                // Bunyikan suara jika ada order baru (INSERT)
-                if (payload.eventType === 'INSERT' && audioActive) {
+                // 2. Logika Suara Spesifik Nama Outlet
+                if (audioActive) {
+                    // Ambil detail nama outlet dari data baru
+                    // Kita gunakan payload.new.outlet_name (pastikan kolom ini ada di tabel orders)
+                    // Atau jika hanya ada outlet_id, kita ambil dari payload
+                    const namaOutlet = payload.new.outlet_name || "Outlet";
+                    const namaProduk = payload.new.product_name || "Produk Baru";
+
+                    // Bunyikan Bell dulu
                     const snd = document.getElementById('notif-sound');
-                    snd.play().catch(e => console.log(e));
-                    speakNow("Pesanan baru masuk");
+                    if(snd) {
+                        snd.currentTime = 0;
+                        snd.play().catch(e => console.log("Audio play error:", e));
+                    }
+
+                    // Suara Manusia menyebutkan Outlet dan Produk
+                    setTimeout(() => {
+                        speakNow(`Pesanan baru masuk dari ${namaOutlet}. ${namaProduk}.`);
+                    }, 800); // Jeda sebentar setelah suara bell
                 }
+            }
+        )
+        // Tambahkan listener untuk UPDATE agar dashboard refresh saat status berubah (misal: selesai)
+        .on('postgres_changes', 
+            { event: 'UPDATE', schema: 'public', table: 'orders' }, 
+            (payload) => {
+                loadActiveOrders();
             }
         )
         .subscribe((status) => {
