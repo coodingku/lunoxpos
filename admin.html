@@ -201,41 +201,42 @@ function initRealtimeSubscription() {
         .on('postgres_changes', 
             { event: 'INSERT', schema: 'public', table: 'orders' }, 
             async (payload) => {
-                console.log("Data Baru:", payload.new);
-                
-                // 1. Refresh tampilan UI
+                // 1. Refresh tampilan monitoring
                 loadActiveOrders(); 
 
                 if (audioActive) {
-                    let namaOutlet = "Outlet Luar";
-                    const namaProduk = payload.new.product_name || "Produk";
+                    let namaOutlet = "Outlet"; // Cadangan jika tidak ketemu
+                    const namaProduk = payload.new.product_name || "Produk Baru";
 
-                    // 2. Ambil Nama Outlet dari tabel 'outlets' berdasarkan ID
+                    // 2. Cari nama (Cabana/Delta/Lunox) berdasarkan outlet_id
                     if (payload.new.outlet_id) {
-                        const { data: outletData } = await _supabase
+                        const { data } = await _supabase
                             .from('outlets')
                             .select('name')
                             .eq('id', payload.new.outlet_id)
                             .single();
                         
-                        if (outletData) namaOutlet = outletData.name;
+                        if (data) namaOutlet = data.name;
                     }
 
-                    // 3. Mainkan Suara
+                    // 3. Mainkan Notifikasi Suara
+                    // Bunyi Bell
                     const snd = document.getElementById('notif-sound');
                     if(snd) {
                         snd.currentTime = 0;
-                        snd.play().catch(e => console.log("Audio play error:", e));
+                        snd.play().catch(e => console.log("Audio Error:", e));
                     }
 
-                    // Jeda 1 detik agar suara bell selesai
+                    // Suara Manusia menyebutkan: "Pesanan baru masuk dari Cabana. Pesanan adalah..."
                     setTimeout(() => {
                         speakNow(`Pesanan baru masuk dari ${namaOutlet}. Pesanan adalah ${namaProduk}`);
-                    }, 1000);
+                    }, 1200);
                 }
             }
         )
-        .subscribe();
+        .subscribe((status) => {
+            console.log("Status Koneksi Realtime:", status);
+        });
 }
         async function loadActiveOrders() {
             const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('status', 'pending').order('created_at', { ascending: false });
@@ -441,14 +442,15 @@ function initRealtimeSubscription() {
             speakNow("Sistem pemantauan aktif");
         }
 
-        function speakNow(text) {
-            if (!audioActive) return;
-            window.speechSynthesis.cancel();
-            const msg = new SpeechSynthesisUtterance(text);
-            msg.lang = 'id-ID';
-            msg.rate = 1.0;
-            window.speechSynthesis.speak(msg);
-        }
+       function speakNow(text) {
+    if (!audioActive) return;
+    window.speechSynthesis.cancel(); // Hentikan suara sebelumnya jika ada
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.lang = 'id-ID'; // WAJIB Bahasa Indonesia agar tidak logat Inggris
+    msg.rate = 0.9;     // Sedikit diperlambat agar jelas
+    msg.pitch = 1; 
+    window.speechSynthesis.speak(msg);
+}
 
     </script>
 </body>
