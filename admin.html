@@ -204,10 +204,6 @@ function initRealtimeSubscription() {
                 // 1. Refresh tampilan monitoring
                 loadActiveOrders(); 
 
-                if (audioActive) {
-                    let namaOutlet = "Outlet"; // Cadangan jika tidak ketemu
-                    const namaProduk = payload.new.product_name || "Produk Baru";
-
                     // 2. Cari nama (Cabana/Delta/Lunox) berdasarkan outlet_id
                     if (payload.new.outlet_id) {
                         const { data } = await _supabase
@@ -229,7 +225,7 @@ function initRealtimeSubscription() {
 
                     // Suara Manusia menyebutkan: "Pesanan baru masuk dari Cabana. Pesanan adalah..."
                     setTimeout(() => {
-                        speakNow(`Pesanan baru masuk dari ${namaOutlet}. Pesanan adalah ${namaProduk}`);
+                        speakNow(`Pesanan baru masuk dari ${namaOutlet}`);
                     }, 1200);
                 }
             }
