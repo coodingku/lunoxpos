@@ -3,97 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bar - Input Order</title>
+    <title>Bar - Take Order</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .selected-card {
+            border-color: #2563eb !important;
+            background-color: #eff6ff !important;
+            transform: scale(0.98);
+        }
+    </style>
 </head>
-<body class="bg-gray-100 p-5">
-    <div class="max-w-md mx-auto bg-white p-6 rounded-xl shadow-md border-t-4 border-blue-600">
-        <h2 class="text-2xl font-bold mb-1 text-blue-600">POS Take Order</h2>
-        <p class="text-gray-500 text-sm mb-6">Input pesanan dari sisi Bar</p>
-        
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Produk</label>
-                <input type="text" id="product" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Es Kopi Aren">
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">Harga (Rp)</label>
-                <input type="number" id="price" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="15000">
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-1">No. Meja / Nama Pelanggan</label>
-                <input type="text" id="table" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Meja 05 / Budi">
-            </div>
-            <button onclick="kirimOrder()" id="btnKirim" class="w-full bg-blue-600 text-white py-4 rounded-lg font-bold hover:bg-blue-700 active:scale-95 transition-all shadow-lg">
-                Kirim ke Kasir
-            </button>
-        </div>
+<body class="bg-gray-50 p-4 pb-20">
+    <div class="max-w-md mx-auto space-y-6">
+        <header class="mb-6">
+            <h1 class="text-2xl font-black text-blue-600">LUNOX POS</h1>
+            <p class="text-gray-500 text-sm">Mode: Input Pesanan Bar</p>
+        </header>
 
-        <div id="msg" class="mt-4 p-3 bg-green-100 text-green-700 rounded-lg hidden text-center font-bold animate-pulse">
-            ✅ Pesanan Terkirim!
-        </div>
+        <section>
+            <label class="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">📍 Pilih Room / Area</label>
+            <div id="room-container" class="grid grid-cols-3 gap-2">
+                <div class="animate-pulse bg-gray-200 h-12 rounded-lg col-span-3"></div>
+            </div>
+        </section>
+
+        <section>
+            <label class="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">👤 Staff Pelaksana</label>
+            <div id="staff-container" class="grid grid-cols-2 gap-2">
+                <div class="animate-pulse bg-gray-200 h-12 rounded-lg col-span-2"></div>
+            </div>
+        </section>
+
+        <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+            <label class="block text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">🛒 Detail Pesanan</label>
+            <div class="space-y-4">
+                <input type="text" id="product" class="w-full p-3 border rounded-lg outline-none focus:border-blue-500" placeholder="Nama Produk (ex: Kopi Susu)">
+                <input type="number" id="price" class="w-full p-3 border rounded-lg outline-none focus:border-blue-500" placeholder="Harga (ex: 15000)">
+                <input type="text" id="table_note" class="w-full p-3 border rounded-lg outline-none focus:border-blue-500" placeholder="Catatan Meja (ex: Meja 04)">
+            </div>
+        </section>
+
+        <button onclick="kirimOrder()" id="btnKirim" class="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-blue-600 text-white py-4 rounded-2xl font-black shadow-xl active:scale-95 transition-all uppercase tracking-widest">
+            Kirim Ke Kasir
+        </button>
     </div>
 
     <script>
-        // KONFIGURASI SUPABASE (Sudah Diperbaiki)
         const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
-        
-        // Inisialisasi Supabase Client
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        let selectedRoomId = null;
+        let selectedStaffId = null;
+
+        // Ambil data Room & Staff dari Database saat Load
+        async function initApp() {
+            const { data: rooms } = await _supabase.from('rooms').select('*');
+            const { data: staff } = await _supabase.from('staff').select('*');
+
+            // Render Rooms
+            const rContainer = document.getElementById('room-container');
+            rContainer.innerHTML = '';
+            rooms.forEach(r => {
+                rContainer.innerHTML += `
+                    <div onclick="selectRoom('${r.id}', this)" class="bg-white border-2 border-gray-200 p-3 rounded-xl text-center cursor-pointer hover:border-blue-300 transition-all">
+                        <span class="text-xs font-bold text-gray-600 uppercase">${r.name}</span>
+                    </div>
+                `;
+            });
+
+            // Render Staff
+            const sContainer = document.getElementById('staff-container');
+            sContainer.innerHTML = '';
+            staff.forEach(s => {
+                sContainer.innerHTML += `
+                    <div onclick="selectStaff('${s.id}', this)" class="bg-white border-2 border-gray-200 p-3 rounded-xl flex items-center justify-center space-x-2 cursor-pointer hover:border-blue-300 transition-all">
+                        <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                        <span class="text-xs font-bold text-gray-600 uppercase">${s.name}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function selectRoom(id, el) {
+            document.querySelectorAll('#room-container div').forEach(d => d.classList.remove('selected-card'));
+            el.classList.add('selected-card');
+            selectedRoomId = id;
+        }
+
+        function selectStaff(id, el) {
+            document.querySelectorAll('#staff-container div').forEach(d => d.classList.remove('selected-card'));
+            el.classList.add('selected-card');
+            selectedStaffId = id;
+        }
 
         async function kirimOrder() {
             const product = document.getElementById('product').value;
             const price = document.getElementById('price').value;
-            const table = document.getElementById('table').value;
+            const note = document.getElementById('table_note').value;
             const btn = document.getElementById('btnKirim');
-            const msg = document.getElementById('msg');
 
-            // Validasi Sederhana
-            if(!product || !price) {
-                alert("Mohon isi Nama Produk dan Harga!");
-                return;
+            if(!selectedRoomId || !selectedStaffId || !product || !price) {
+                return alert("⚠️ Lengkapi data: Room, Staff, Produk & Harga!");
             }
 
-            // Animasi Loading
             btn.disabled = true;
-            btn.innerHTML = `<span class="animate-spin inline-block mr-2">⏳</span> Mengirim...`;
+            btn.innerText = "SEDANG MENGIRIM...";
 
-            try {
-                const { data, error } = await _supabase
-                    .from('orders')
-                    .insert([
-                        { 
-                            product_name: product, 
-                            price: parseInt(price), // Pastikan harga masuk sebagai angka
-                            table_number: table,
-                            status: 'pending' 
-                        }
-                    ]);
+            const { error } = await _supabase.from('orders').insert([{
+                product_name: product,
+                price: parseInt(price),
+                table_number: note,
+                room_id: selectedRoomId,
+                staff_id: selectedStaffId,
+                status: 'pending'
+            }]);
 
-                if (error) throw error;
-
-                // Jika Berhasil
-                msg.classList.remove('hidden');
-                
-                // Reset Form
+            if (error) {
+                alert("Gagal: " + error.message);
+            } else {
+                alert("✅ BERHASIL! Orderan sudah masuk ke Kasir.");
+                // Reset Form Produk saja, Room & Staff tetap terpilih (untuk order berikutnya)
                 document.getElementById('product').value = "";
                 document.getElementById('price').value = "";
-                document.getElementById('table').value = "";
-
-                // Sembunyikan notif setelah 3 detik
-                setTimeout(() => {
-                    msg.classList.add('hidden');
-                }, 3000);
-
-            } catch (err) {
-                alert("Error: " + err.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Kirim ke Kasir";
             }
+            btn.disabled = false;
+            btn.innerText = "KIRIM KE KASIR";
         }
+
+        initApp();
     </script>
 </body>
 </html>
