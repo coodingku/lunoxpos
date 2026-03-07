@@ -3,299 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUNOX POS - Admin & Report</title>
+    <title>LUNOX ADMIN CENTRAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        .selected-card { border-color: #2563eb !important; background-color: #eff6ff !important; border-width: 3px; }
-        .active-menu { background-color: #1e293b; border-left: 4px solid #3b82f6; color: white; }
-        #print-area { display: none; }
-        @media print {
-            body * { visibility: hidden; }
-            #print-area, #print-area * { visibility: visible !important; display: block !important; color: black !important; }
-            #print-area { position: absolute; left: 0; top: 0; width: 58mm; font-family: monospace; }
-            @page { size: auto; margin: 0mm; }
-        }
+        .outlet-cabana { border-left: 6px solid #f97316; }
+        .outlet-delta { border-left: 6px solid #3b82f6; }
+        .outlet-lunox { border-left: 6px solid #a855f7; }
+        .active-tab { background-color: #3b82f6; color: white; border-radius: 12px; }
+        .animate-new { animation: slideIn 0.5s ease-out; border: 2px solid #fbbf24; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="bg-gray-100 flex h-screen overflow-hidden text-slate-800 font-sans">
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
 
-    <div id="print-area"></div>
-
-    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex">
-        <div class="p-6 border-b border-slate-800">
-            <div class="text-2xl font-black text-white italic">LUNOX <span class="text-blue-500">POS</span></div>
-            <div id="active-outlet-badge" class="mt-2 text-[10px] bg-blue-600 text-white px-2 py-1 rounded inline-block font-bold uppercase">Memuat...</div>
-        </div>
-        <nav class="mt-4 flex-1">
-            <a href="#" onclick="showPage('bar')" id="menu-bar" class="flex items-center px-6 py-4 active-menu transition"><i class="fa fa-cash-register mr-3"></i> Kasir</a>
-            <a href="#" onclick="showPage('admin')" id="menu-admin" class="flex items-center px-6 py-4 hover:bg-slate-800 transition"><i class="fa fa-plus-circle mr-3"></i> Input Produk</a>
-            <a href="#" onclick="showPage('report')" id="menu-report" class="flex items-center px-6 py-4 hover:bg-slate-800 transition"><i class="fa fa-file-invoice-dollar mr-3"></i> Laporan</a>
-        </nav>
-        <button onclick="location.reload()" class="p-6 text-xs font-bold text-slate-500 hover:text-white border-t border-slate-800 text-left uppercase"><i class="fa fa-sync mr-2"></i> Ganti Outlet</button>
-    </aside>
-
-    <main class="flex-1 overflow-y-auto p-4 md:p-8">
-        
-        <div id="page-bar" class="page-content">
-            <div class="flex flex-col lg:flex-row gap-6">
-                <div class="flex-1 space-y-6">
-                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex gap-4 items-center">
-                        <div class="relative flex-1">
-                            <i class="fa fa-search absolute left-4 top-3.5 text-gray-400"></i>
-                            <input type="text" id="search-input" oninput="filterBySearch()" placeholder="Cari menu..." class="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-2xl outline-none ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500 font-bold text-sm">
-                        </div>
-                        <div id="category-filters" class="flex gap-2 overflow-x-auto whitespace-nowrap"></div>
-                    </div>
-                    <div id="product-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-4"></div>
-                </div>
-                <div class="w-full lg:w-80 space-y-4 text-center">
-                    <div class="bg-white p-6 rounded-3xl shadow-xl border border-gray-100 sticky top-4 text-left">
-                        <h3 class="font-black text-slate-800 mb-4 uppercase text-xs tracking-widest"><i class="fa fa-shopping-cart mr-2 text-blue-600"></i> Detail Order</h3>
-                        <div class="space-y-3 mb-6">
-                            <select id="select-room" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200"></select>
-                            <select id="select-staff" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200"></select>
-                            <input type="text" id="note" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200" placeholder="Meja / Nama Tamu">
-                        </div>
-                        <div id="selected-info" class="p-4 bg-blue-50 rounded-2xl hidden border border-blue-200 mb-6">
-                            <p id="display-item" class="font-black text-slate-800 text-lg leading-tight uppercase"></p>
-                            <p id="display-price" class="text-blue-700 font-bold text-sm mt-1"></p>
-                        </div>
-                        <button onclick="sendOrder()" id="btnSend" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-blue-700 active:scale-95 transition-all uppercase">Kirim & Print Bill</button>
-                    </div>
-                </div>
+    <header class="bg-slate-800 p-6 shadow-2xl sticky top-0 z-50 border-b border-slate-700">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-center gap-6">
+            <div>
+                <h1 class="text-2xl font-black tracking-tighter italic">LUNOX <span class="text-blue-500 underline">ADMIN</span></h1>
+                <p id="connection-status" class="text-[10px] font-bold uppercase tracking-widest text-slate-500">🟡 Menghubungkan...</p>
             </div>
-        </div>
 
-        <div id="page-admin" class="page-content hidden max-w-2xl mx-auto">
-            <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-                <h2 class="text-2xl font-black mb-6 flex items-center"><i class="fa fa-plus-circle mr-3 text-blue-600"></i> TAMBAH PRODUK BARU</h2>
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-xs font-bold text-slate-400 uppercase">Nama Produk</label>
-                        <input type="text" id="new-p-name" class="w-full p-3 bg-gray-50 rounded-xl outline-none ring-1 ring-gray-200 mt-1 font-bold" placeholder="Contoh: Nasi Goreng">
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-slate-400 uppercase">Kategori</label>
-                        <select id="new-p-cat" class="w-full p-3 bg-gray-50 rounded-xl outline-none ring-1 ring-gray-200 mt-1 font-bold">
-                            <option value="Makanan">Makanan</option>
-                            <option value="Minuman">Minuman</option>
-                            <option value="Snack">Snack</option>
-                            <option value="Lainnya">Lainnya</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-slate-400 uppercase">Harga Satuan (Rp)</label>
-                        <input type="number" id="new-p-price" class="w-full p-3 bg-gray-50 rounded-xl outline-none ring-1 ring-gray-200 mt-1 font-bold" placeholder="0">
-                    </div>
-                    <button onclick="saveNewProduct()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-green-700 transition-all uppercase mt-4">Simpan Produk</button>
-                </div>
-            </div>
-        </div>
+            <nav class="flex bg-slate-900 p-1 rounded-2xl border border-slate-700">
+                <button onclick="showTab('monitor')" id="tab-monitor" class="px-6 py-2 text-xs font-black active-tab transition-all">
+                    <i class="fa fa-desktop mr-2"></i> MONITORING
+                </button>
+                <button onclick="showTab('inventory')" id="tab-inventory" class="px-6 py-2 text-xs font-black hover:text-white transition-all">
+                    <i class="fa fa-plus-circle mr-2"></i> PRODUK
+                </button>
+                <button onclick="showTab('report')" id="tab-report" class="px-6 py-2 text-xs font-black hover:text-white transition-all">
+                    <i class="fa fa-file-invoice mr-2"></i> LAPORAN
+                </button>
+            </nav>
 
-        <div id="page-report" class="page-content hidden">
+            <button id="enable-audio" onclick="activateAudio()" class="bg-yellow-500 text-slate-900 px-5 py-2 rounded-xl text-xs font-black animate-pulse shadow-lg">
+                <i class="fa fa-volume-up mr-2"></i> AKTIFKAN NOTIF SUARA
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6">
+
+        <div id="section-monitor" class="tab-content">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-black flex items-center"><i class="fa fa-file-invoice-dollar mr-3 text-blue-600"></i> LAPORAN PENJUALAN</h2>
+                <h2 class="text-xl font-bold italic text-blue-400"><i class="fa fa-bolt mr-2"></i> Live Order Feed</h2>
                 <div class="flex gap-2">
-                    <button onclick="exportExcel()" class="bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-green-700 transition-all"><i class="fa fa-file-excel mr-2"></i> EXCEL</button>
-                    <button onclick="exportPDF()" class="bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-red-700 transition-all"><i class="fa fa-file-pdf mr-2"></i> PDF</button>
+                    <button onclick="filterByOutlet('all')" class="filter-btn bg-slate-700 px-3 py-1 rounded-lg text-[10px] font-bold hover:bg-blue-600 transition">ALL</button>
+                    <button onclick="filterByOutlet('Cabana')" class="filter-btn bg-slate-700 px-3 py-1 rounded-lg text-[10px] font-bold hover:bg-orange-600 transition">CABANA</button>
+                    <button onclick="filterByOutlet('Delta')" class="filter-btn bg-slate-700 px-3 py-1 rounded-lg text-[10px] font-bold hover:bg-blue-600 transition">DELTA</button>
                 </div>
             </div>
-            <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                <table class="w-full text-left border-collapse" id="report-table">
-                    <thead class="bg-gray-50 border-b border-gray-100">
-                        <tr>
-                            <th class="p-4 text-xs font-bold text-slate-400 uppercase">Tanggal</th>
-                            <th class="p-4 text-xs font-bold text-slate-400 uppercase">Produk</th>
-                            <th class="p-4 text-xs font-bold text-slate-400 uppercase">Staff</th>
-                            <th class="p-4 text-xs font-bold text-slate-400 uppercase">Note</th>
-                            <th class="p-4 text-xs font-bold text-slate-400 uppercase">Harga</th>
-                        </tr>
-                    </thead>
-                    <tbody id="report-body" class="text-sm font-bold"></tbody>
-                    <tfoot class="bg-blue-50">
-                        <tr>
-                            <td colspan="4" class="p-4 text-right font-black uppercase tracking-tighter text-blue-800">TOTAL PENDAPATAN :</td>
-                            <td id="report-total" class="p-4 font-black text-blue-800">Rp 0</td>
-                        </tr>
-                    </tfoot>
-                </table>
+            <div id="order-feed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+        </div>
+
+        <div id="section-inventory" class="tab-content hidden">
+            <div class="max-w-xl mx-auto bg-slate-800 p-8 rounded-3xl border border-slate-700 shadow-xl">
+                <h2 class="text-2xl font-black mb-6 text-white uppercase tracking-tighter">Tambah Menu Baru</h2>
+                <div class="space-y-4">
+                    <input type="text" id="p-name" placeholder="Nama Barang" class="w-full p-4 bg-slate-900 border border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold">
+                    <select id="p-cat" class="w-full p-4 bg-slate-900 border border-slate-700 rounded-xl font-bold">
+                        <option value="Makanan">Makanan</option>
+                        <option value="Minuman">Minuman</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                    <input type="number" id="p-price" placeholder="Harga Satuan (Rp)" class="w-full p-4 bg-slate-900 border border-slate-700 rounded-xl outline-none font-bold">
+                    <button onclick="saveProduct()" class="w-full bg-blue-600 py-4 rounded-xl font-black hover:bg-blue-700 transition shadow-lg uppercase">Simpan ke Database</button>
+                </div>
             </div>
         </div>
 
+        <div id="section-report" class="tab-content hidden">
+            <div class="bg-slate-800 rounded-3xl border border-slate-700 p-6">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                    <h2 class="text-xl font-black italic">DATABASE LAPORAN</h2>
+                    <div class="flex gap-2">
+                        <button onclick="exportToExcel()" class="bg-green-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-green-700"><i class="fa fa-file-excel mr-2"></i> EXCEL</button>
+                        <button onclick="exportToPDF()" class="bg-red-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-700"><i class="fa fa-file-pdf mr-2"></i> PDF</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left" id="main-report-table">
+                        <thead class="text-[10px] text-slate-500 uppercase font-bold border-b border-slate-700">
+                            <tr>
+                                <th class="p-4">Tgl / Jam</th>
+                                <th class="p-4">Outlet</th>
+                                <th class="p-4">Produk</th>
+                                <th class="p-4">Staff</th>
+                                <th class="p-4">Harga</th>
+                            </tr>
+                        </thead>
+                        <tbody id="report-body" class="text-sm"></tbody>
+                        <tfoot class="bg-slate-900 border-t border-slate-700">
+                            <tr>
+                                <td colspan="4" class="p-4 font-black text-right text-blue-400 uppercase italic">Grand Total Omzet :</td>
+                                <td id="grand-total" class="p-4 font-black text-white text-lg italic">Rp 0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
     </main>
 
-    <div id="outlet-selector" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center p-6">
-        <div class="max-w-md w-full text-center">
-            <h1 class="text-4xl font-black text-white italic mb-10 tracking-tighter">LUNOX <span class="text-blue-500 underline">POS</span></h1>
-            <div id="outlet-list-btns" class="grid gap-4"></div>
-        </div>
-    </div>
+    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
     <script>
         const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
-        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNceGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-        let allProducts = [], selectedOutlet = null, currentOrderProduct = null, currentCategory = 'All';
+        let audioActive = false;
+        let currentFilter = 'all';
 
-        async function init() {
-            const { data } = await _supabase.from('outlets').select('*');
-            document.getElementById('outlet-list-btns').innerHTML = data.map(o => `
-                <button onclick="chooseOutlet('${o.id}', '${o.name}')" class="w-full p-5 bg-slate-800 hover:bg-blue-600 text-white rounded-2xl font-black flex justify-between items-center transition-all group">
-                    ${o.name} <i class="fa fa-arrow-right opacity-30 group-hover:opacity-100"></i>
-                </button>
-            `).join('');
+        // 1. FUNGSI SUARA & NOTIFIKASI
+        function activateAudio() {
+            const audio = document.getElementById('notif-sound');
+            audio.play().then(() => { audio.pause(); audioActive = true;
+                const btn = document.getElementById('enable-audio');
+                btn.className = "bg-green-600 text-white px-5 py-2 rounded-xl text-xs font-black shadow-lg";
+                btn.innerHTML = '<i class="fa fa-check-circle mr-2"></i> SISTEM SUARA AKTIF';
+                speak("Sistem monitoring aktif. Menunggu pesanan.");
+            });
         }
 
-        async function chooseOutlet(id, name) {
-            selectedOutlet = { id, name };
-            document.getElementById('outlet-selector').classList.add('hidden');
-            document.getElementById('active-outlet-badge').innerText = name;
+        function speak(text) {
+            if (!audioActive) return;
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.lang = 'id-ID'; msg.rate = 0.9;
+            window.speechSynthesis.speak(msg);
+        }
+
+        // 2. FUNGSI MONITORING REALTIME
+        async function loadActiveOrders() {
+            const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('status', 'pending').order('created_at', { ascending: false });
+            if (data) data.forEach(order => appendToFeed(order, false));
+        }
+
+        function appendToFeed(order, isNew) {
+            const feed = document.getElementById('order-feed');
+            let border = (order.outlets?.name === 'Cabana') ? "outlet-cabana" : (order.outlets?.name === 'Delta') ? "outlet-delta" : "outlet-lunox";
             
-            const [r, s, p] = await Promise.all([
-                _supabase.from('rooms').select('*'),
-                _supabase.from('staff').select('*'),
-                _supabase.from('products').select('*')
-            ]);
-
-            allProducts = p.data || [];
-            document.getElementById('select-room').innerHTML = '<option value="">-- Pilih Room --</option>' + r.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
-            document.getElementById('select-staff').innerHTML = '<option value="">-- Pilih Staff --</option>' + s.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
-
-            const cats = ['All', ...new Set(allProducts.map(i => i.category))];
-            document.getElementById('category-filters').innerHTML = cats.map(c => `
-                <button onclick="filterByCategory('${c}', this)" class="category-btn px-4 py-2 rounded-xl border font-bold text-xs transition-all ${c==='All'?'bg-blue-600 text-white':'bg-white text-gray-500'}">${c}</button>
-            `).join('');
-
-            renderProducts(allProducts);
-        }
-
-        function renderProducts(items) {
-            document.getElementById('product-grid').innerHTML = items.map(i => `
-                <div onclick="selectProduct('${i.id}', '${i.name}', ${i.price}, this)" class="bg-white p-5 rounded-3xl border-2 border-transparent shadow-sm hover:border-blue-400 cursor-pointer transition-all active:scale-95 group">
-                    <p class="font-black text-slate-800 text-sm h-10 overflow-hidden uppercase">${i.name}</p>
-                    <p class="text-blue-600 font-black text-xs mt-2 italic">Rp ${i.price.toLocaleString()}</p>
+            const card = document.createElement('div');
+            card.id = `order-${order.id}`;
+            card.className = `order-card bg-slate-800 p-5 rounded-3xl shadow-xl relative ${border} ${isNew ? 'animate-new' : ''}`;
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <span class="text-[9px] font-black bg-slate-900 px-2 py-1 rounded text-blue-400 uppercase">${order.outlets?.name || 'OUTLET'}</span>
+                    <button onclick="completeOrder('${order.id}')" class="text-slate-600 hover:text-green-500 transition"><i class="fa fa-check-circle text-xl"></i></button>
                 </div>
-            `).join('');
+                <h3 class="text-lg font-black text-white uppercase">${order.product_name}</h3>
+                <div class="mt-4 pt-4 border-t border-slate-700 flex justify-between items-center text-[11px] font-bold">
+                    <span class="text-blue-500">${order.staff?.name || 'Staff'}</span>
+                    <span class="text-slate-400 uppercase">${order.rooms?.name || '-'} / ${order.table_number || '-'}</span>
+                </div>
+            `;
+            if (isNew) { feed.prepend(card); if (audioActive) { document.getElementById('notif-sound').play(); speak(`Pesanan baru di ${order.outlets?.name}. ${order.product_name}`); }}
+            else { feed.appendChild(card); }
         }
 
-        function filterBySearch() {
-            const kw = document.getElementById('search-input').value.toLowerCase();
-            const f = allProducts.filter(p => p.name.toLowerCase().includes(kw) && (currentCategory==='All' || p.category===currentCategory));
-            renderProducts(f);
+        async function completeOrder(id) {
+            const { error } = await _supabase.from('orders').update({ status: 'completed' }).eq('id', id);
+            if (!error) document.getElementById(`order-${id}`).remove();
         }
 
-        function filterByCategory(cat, el) {
-            currentCategory = cat;
-            document.querySelectorAll('.category-btn').forEach(b => { b.classList.remove('bg-blue-600','text-white'); b.classList.add('bg-white','text-gray-500'); });
-            el.classList.replace('bg-white','bg-blue-600'); el.classList.replace('text-gray-500','text-white');
-            filterBySearch();
-        }
-
-        function selectProduct(id, name, price, el) {
-            document.querySelectorAll('#product-grid div').forEach(d => d.classList.remove('selected-card'));
-            el.classList.add('selected-card');
-            currentOrderProduct = { id, name, price };
-            document.getElementById('selected-info').classList.remove('hidden');
-            document.getElementById('display-item').innerText = name;
-            document.getElementById('display-price').innerText = "Rp " + price.toLocaleString();
-        }
-
-        async function sendOrder() {
-            const r = document.getElementById('select-room');
-            const s = document.getElementById('select-staff');
-            const n = document.getElementById('note').value;
-            if(!r.value || !s.value || !currentOrderProduct) return alert("Pilih Data Lengkap!");
-
-            const { error } = await _supabase.from('orders').insert([{
-                product_name: currentOrderProduct.name,
-                price: currentOrderProduct.price,
-                room_id: r.value, staff_id: s.value, outlet_id: selectedOutlet.id, table_number: n
-            }]);
-
-            if(!error) {
-                // Render bill untuk print
-                document.getElementById('print-area').innerHTML = `
-                    <div style="text-align:center; border-bottom:1px dashed #000; padding:10px 0;">
-                        <strong>${selectedOutlet.name.toUpperCase()}</strong><br><small>${new Date().toLocaleString()}</small>
-                    </div>
-                    <div style="padding:10px 0; font-size:12px;">
-                        Staff: ${s.options[s.selectedIndex].text}<br>Note: ${n || '-'}<br>
-                        <p style="border-bottom:1px dashed #000; margin:5px 0;"></p>
-                        <strong>${currentOrderProduct.name}</strong><br>
-                        Total: Rp ${currentOrderProduct.price.toLocaleString()}
-                    </div>
-                `;
-                setTimeout(() => { window.print(); location.reload(); }, 300);
-            }
-        }
-
-        // --- FITUR ADMIN: SIMPAN PRODUK ---
-        async function saveNewProduct() {
-            const name = document.getElementById('new-p-name').value;
-            const cat = document.getElementById('new-p-cat').value;
-            const price = document.getElementById('new-p-price').value;
-
-            if(!name || !price) return alert("Data produk tidak lengkap!");
-
+        // 3. FUNGSI INVENTORY
+        async function saveProduct() {
+            const name = document.getElementById('p-name').value;
+            const cat = document.getElementById('p-cat').value;
+            const price = document.getElementById('p-price').value;
+            if(!name || !price) return alert("Lengkapi data!");
             const { error } = await _supabase.from('products').insert([{ name, category: cat, price: parseInt(price) }]);
-            if(!error) {
-                alert("Produk Berhasil Ditambah!");
-                location.reload();
-            }
+            if(!error) { alert("Produk Berhasil Masuk!"); location.reload(); }
         }
 
-        // --- FITUR REPORT: LOAD DATA ---
-        async function loadReport() {
-            const { data, error } = await _supabase.from('orders').select('*').eq('outlet_id', selectedOutlet.id).order('created_at', {ascending: false});
-            if(data) {
+        // 4. FUNGSI LAPORAN
+        async function loadReports() {
+            const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name)').order('created_at', { ascending: false });
+            if (data) {
                 let total = 0;
                 document.getElementById('report-body').innerHTML = data.map(o => {
                     total += o.price;
-                    return `
-                        <tr class="border-b border-gray-50 hover:bg-gray-50">
-                            <td class="p-4">${new Date(o.created_at).toLocaleDateString()}</td>
-                            <td class="p-4 uppercase text-blue-600">${o.product_name}</td>
-                            <td class="p-4">${o.staff_id || 'Staff'}</td>
-                            <td class="p-4 text-slate-400 font-normal">${o.table_number || '-'}</td>
-                            <td class="p-4">Rp ${o.price.toLocaleString()}</td>
-                        </tr>
-                    `;
+                    return `<tr class="border-b border-slate-700 hover:bg-slate-700 transition">
+                        <td class="p-4 text-slate-500 text-[11px] font-bold">${new Date(o.created_at).toLocaleString()}</td>
+                        <td class="p-4 font-black uppercase italic text-orange-400">${o.outlets?.name || '-'}</td>
+                        <td class="p-4 font-black uppercase text-white">${o.product_name}</td>
+                        <td class="p-4 font-bold text-blue-400">${o.staff?.name || '-'}</td>
+                        <td class="p-4 font-black">Rp ${o.price.toLocaleString()}</td>
+                    </tr>`;
                 }).join('');
-                document.getElementById('report-total').innerText = "Rp " + total.toLocaleString();
+                document.getElementById('grand-total').innerText = "Rp " + total.toLocaleString();
             }
         }
 
-        // --- EXPORT PDF ---
-        function exportPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text(`Laporan Penjualan - ${selectedOutlet.name}`, 14, 15);
-            doc.autoTable({ html: '#report-table', startY: 20 });
-            doc.save(`Laporan_${selectedOutlet.name}.pdf`);
+        // 5. NAVIGASI TABS & REALTIME
+        function showTab(t) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-tab'));
+            document.getElementById(`section-${t}`).classList.remove('hidden');
+            document.getElementById(`tab-${t}`).classList.add('active-tab');
+            if (t === 'report') loadReports();
         }
 
-        // --- EXPORT EXCEL ---
-        function exportExcel() {
-            const wb = XLSX.utils.table_to_book(document.getElementById('report-table'));
-            XLSX.writeFile(wb, `Laporan_${selectedOutlet.name}.xlsx`);
-        }
+        _supabase.channel('admin-realtime').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async (p) => {
+            const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('id', p.new.id).single();
+            if (data) appendToFeed(data, true);
+        }).subscribe();
 
-        function showPage(p) {
-            document.querySelectorAll('.page-content').forEach(pg => pg.classList.add('hidden'));
-            document.querySelectorAll('nav a').forEach(a => a.classList.remove('active-menu'));
-            document.getElementById(`page-${p}`).classList.remove('hidden');
-            document.getElementById(`menu-${p}`).classList.add('active-menu');
-            if(p === 'report') loadReport();
-        }
+        // EXPORT LOGIC
+        function exportToExcel() { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById('main-report-table')), 'Laporan_Lunox_POS.xlsx'); }
+        function exportToPDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text("Laporan Penjualan Lunox POS", 14, 15); doc.autoTable({ html: '#main-report-table', startY: 20 }); doc.save("Laporan_Lunox.pdf"); }
 
-        init();
+        loadActiveOrders();
     </script>
 </body>
 </html>
