@@ -194,37 +194,46 @@
             }
         }
 
-        // --- REALTIME ENGINE ---
-        function initRealtimeSubscription() {
-            console.log("Realtime Monitor Aktif...");
-            _supabase.removeAllChannels();
+      function initRealtimeSubscription() {
+    console.log("Memulai Koneksi Realtime...");
+    
+    // Hapus channel lama agar tidak double koneksi (penyebab WebSocket closed)
+    _supabase.removeAllChannels();
 
-            _supabase
-                .channel('db-changes')
-                .on('postgres_changes', 
-                    { event: 'INSERT', schema: 'public', table: 'orders' }, 
-                    async (payload) => {
-                        console.log("Sinyal Realtime Diterima!");
-                        const { data, error } = await _supabase
-                            .from('orders')
-                            .select('*, outlets(name), staff(name), rooms(name)')
-                            .eq('id', payload.new.id)
-                            .single();
+    const channel = _supabase.channel('db-changes')
+        .on('postgres_changes', 
+            { 
+                event: '*', // Dengarkan INSERT, UPDATE, dan DELETE
+                schema: 'public', 
+                table: 'orders' 
+            }, 
+            async (payload) => {
+                console.log("Data Berubah:", payload);
+                
+                // Jika ada order baru masuk (INSERT)
+                if (payload.eventType === 'INSERT') {
+                    // Ambil detail data lengkap (termasuk join table)
+                    const { data } = await _supabase
+                        .from('orders')
+                        .select('*, outlets(name), staff(name), rooms(name)')
+                        .eq('id', payload.new.id)
+                        .single();
 
-                        if (data && data.status === 'pending') {
-                            appendToFeed(data, true);
-                        }
+                    if (data && data.status === 'pending') {
+                        appendToFeed(data, true);
                     }
-                )
-                .subscribe();
-        }
-
-        // --- MONITORING ---
-        function filterMonitor(outlet) {
-            currentMonitorFilter = outlet;
-            loadActiveOrders();
-        }
-
+                } 
+                
+                // Jika ada order yang diupdate atau dihapus (misal dibatalkan)
+                else {
+                    loadActiveOrders(); // Refresh total agar sinkron
+                }
+            }
+        )
+        .subscribe((status) => {
+            console.log("Status Koneksi Realtime:", status);
+        });
+}
         async function loadActiveOrders() {
             const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('status', 'pending').order('created_at', { ascending: false });
             const feed = document.getElementById('order-feed');
