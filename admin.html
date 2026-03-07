@@ -204,32 +204,36 @@ function initRealtimeSubscription() {
                 // 1. Refresh tampilan monitoring
                 loadActiveOrders(); 
 
-                    // 2. Cari nama (Cabana/Delta/Lunox) berdasarkan outlet_id
+                if (audioActive) {
+                    let namaOutlet = "Outlet"; // Default jika tidak ditemukan
+
+                    // 2. Ambil nama outlet dari tabel outlets berdasarkan outlet_id
                     if (payload.new.outlet_id) {
-                        const { data } = await _supabase
+                        const { data, error } = await _supabase
                             .from('outlets')
                             .select('name')
                             .eq('id', payload.new.outlet_id)
                             .single();
                         
-                        if (data) namaOutlet = data.name;
+                        if (data && !error) {
+                            namaOutlet = data.name;
+                        }
                     }
-                if (audioActive) {
-                    let namaOutlet = "Outlet"; // Cadangan jika tidak ketemu
-                    const namaProduk = payload.new.product_name || "Produk Baru";
-
 
                     // 3. Mainkan Notifikasi Suara
-                    // Bunyi Bell
+                    
+                    // Bunyi Bell (Efek Suara)
                     const snd = document.getElementById('notif-sound');
                     if(snd) {
                         snd.currentTime = 0;
                         snd.play().catch(e => console.log("Audio Error:", e));
                     }
 
-                    // Suara Manusia menyebutkan: "Pesanan baru masuk dari Cabana. Pesanan adalah..."
+                    // 4. Suara Manusia menyebutkan hanya Nama Outlet
+                    // Jeda 1.2 detik agar tidak tabrakan dengan bunyi bell
                     setTimeout(() => {
-                        speakNow(`Pesanan baru masuk dari ${namaOutlet}. Pesanan adalah ${namaProduk}`);
+                        // Perbaikan: Hanya menyebutkan "Pesanan baru masuk dari [Nama Outlet]"
+                        speakNow(`Pesanan baru masuk dari ${namaOutlet}`);
                     }, 1200);
                 }
             }
