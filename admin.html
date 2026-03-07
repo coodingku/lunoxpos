@@ -214,6 +214,10 @@ function initRealtimeSubscription() {
                         
                         if (data) namaOutlet = data.name;
                     }
+                if (audioActive) {
+                    let namaOutlet = "Outlet"; // Cadangan jika tidak ketemu
+                    const namaProduk = payload.new.product_name || "Produk Baru";
+
 
                     // 3. Mainkan Notifikasi Suara
                     // Bunyi Bell
@@ -225,7 +229,7 @@ function initRealtimeSubscription() {
 
                     // Suara Manusia menyebutkan: "Pesanan baru masuk dari Cabana. Pesanan adalah..."
                     setTimeout(() => {
-                        speakNow(`Pesanan baru masuk dari ${namaOutlet}`);
+                        speakNow(`Pesanan baru masuk dari ${namaOutlet}. Pesanan adalah ${namaProduk}`);
                     }, 1200);
                 }
             }
