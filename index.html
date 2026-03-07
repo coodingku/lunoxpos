@@ -81,6 +81,10 @@
                 <i class="fa-solid fa-receipt mr-0 lg:mr-3 w-5 text-lg"></i>
                 <span class="hidden lg:inline font-bold uppercase text-xs">Riwayat</span>
             </button>
+            <button onclick="showPage('closing')" id="menu-closing" class="w-full flex items-center justify-center lg:justify-start px-6 py-4 hover:bg-slate-800 transition group">
+                <i class="fa-solid fa-box-archive mr-0 lg:mr-3 w-5 text-lg"></i>
+                <span class="hidden lg:inline font-bold uppercase text-xs">Close System</span>
+            </button>
         </nav>
         <div class="p-4">
              <button onclick="location.reload()" class="w-full py-3 bg-slate-800 rounded-xl text-[10px] font-black text-slate-400 hover:text-white transition uppercase">
@@ -90,6 +94,7 @@
     </aside>
 
     <main class="flex-1 overflow-y-auto relative">
+        
         <div id="page-rooms" class="p-6 lg:p-10 page-content">
             <div class="flex justify-between items-end mb-8">
                 <div>
@@ -183,6 +188,46 @@
                 </table>
              </div>
         </div>
+
+        <div id="page-closing" class="p-6 lg:p-10 page-content hidden">
+            <div class="mb-8 flex justify-between items-end">
+                <div>
+                    <h2 class="text-3xl font-black uppercase italic tracking-tighter">Close System</h2>
+                    <p id="closing-date-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Laporan Omzet Hari Ini</p>
+                </div>
+                <button onclick="printClosingReport()" class="bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black uppercase text-[10px] hover:bg-emerald-700 transition shadow-lg shadow-emerald-200">
+                    <i class="fa fa-print mr-2"></i> Print Laporan
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="bg-blue-600 p-8 rounded-[40px] text-white shadow-xl relative overflow-hidden">
+                    <p class="text-[10px] font-bold uppercase opacity-80 mb-2">Total Omzet (Paid)</p>
+                    <h3 id="close-total-omzet" class="text-4xl font-black italic tracking-tighter">Rp 0</h3>
+                    <i class="fa fa-money-bill-wave absolute -right-4 -bottom-4 text-white/10 text-7xl"></i>
+                </div>
+                <div class="bg-slate-900 p-8 rounded-[40px] text-white shadow-xl relative overflow-hidden">
+                    <p class="text-[10px] font-bold uppercase opacity-80 mb-2">Total Item Terjual</p>
+                    <h3 id="close-total-items" class="text-4xl font-black italic tracking-tighter">0 Qty</h3>
+                    <i class="fa fa-utensils absolute -right-4 -bottom-4 text-white/10 text-7xl"></i>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-[40px] shadow-xl border border-gray-100 overflow-hidden">
+                <div class="p-6 border-b border-gray-50 font-black uppercase text-xs italic tracking-widest text-slate-400">Rincian Penjualan FnB</div>
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                        <tr>
+                            <th class="p-6">Nama Menu</th>
+                            <th class="p-6 text-center">Terjual</th>
+                            <th class="p-6 text-right">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="closing-items-body" class="text-xs font-bold divide-y divide-gray-50"></tbody>
+                </table>
+            </div>
+        </div>
+
     </main>
 
     <script>
@@ -191,14 +236,13 @@
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
         let allProducts = [], allRooms = [], selectedOutlet = null, activeRoom = null, currentOrderProduct = null;
+        let closingData = { total: 0, items: [], totalQty: 0 };
 
         async function init() {
-            // AKTIFKAN REALTIME LISTENER SEBELUM SEMUA DIMULAI
             _supabase.channel('pos_updates')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-                    console.log('Ada perubahan data!', payload);
-                    renderRooms(); // Update warna meja seketika
-                    if(activeRoom) refreshRoomBill(); // Update bill jika sedang dibuka
+                    renderRooms();
+                    if(activeRoom) refreshRoomBill();
                 }).subscribe();
 
             try {
@@ -210,9 +254,7 @@
                         <i class="fa fa-chevron-right opacity-30 group-hover:translate-x-1 transition-all"></i>
                     </button>
                 `).join('');
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) { console.error(err); }
         }
 
         async function chooseOutlet(id, name) {
@@ -236,22 +278,16 @@
         }
 
         async function renderRooms() {
-            // Logic Realtime: Meja jadi Kuning jika ada status selain 'paid'
-            const { data: activeOrders } = await _supabase.from('orders')
-                .select('room_id')
-                .neq('status', 'paid'); // Status pending/completed/processing dianggap AKTIF
-
+            const { data: activeOrders } = await _supabase.from('orders').select('room_id').neq('status', 'paid');
             const occupiedRoomIds = activeOrders ? [...new Set(activeOrders.map(o => o.room_id))] : [];
 
             const grid = document.getElementById('room-grid');
             grid.innerHTML = allRooms.map(room => {
                 const isOccupied = occupiedRoomIds.includes(room.id);
                 const cardBg = isOccupied ? 'bg-yellow-500 shadow-yellow-500/20' : 'bg-blue-600 shadow-blue-500/20';
-                const textColor = isOccupied ? 'text-slate-900' : 'text-white';
-
                 return `
                 <div onclick="openRoom('${room.id}', '${room.name}')" class="group cursor-pointer transition-all active:scale-95">
-                    <div class="${cardBg} ${textColor} p-6 rounded-[30px] shadow-lg text-center h-36 flex flex-col justify-center items-center relative transition-all border-b-4 border-black/10">
+                    <div class="${cardBg} text-white p-6 rounded-[30px] shadow-lg text-center h-36 flex flex-col justify-center items-center relative transition-all border-b-4 border-black/10">
                         <i class="fa ${isOccupied ? 'fa-door-open' : 'fa-door-closed'} text-2xl mb-2"></i>
                         <span class="font-black text-[11px] uppercase leading-none">${room.name}</span>
                         <span class="text-[8px] mt-1 font-bold opacity-70">${isOccupied ? 'Occupied' : 'Vacant'}</span>
@@ -269,12 +305,7 @@
 
         async function refreshRoomBill() {
             if(!activeRoom) return;
-            // Ambil semua item yang belum lunas
-            const { data: bills } = await _supabase.from('orders')
-                .select('*')
-                .eq('room_id', activeRoom.id)
-                .neq('status', 'paid');
-
+            const { data: bills } = await _supabase.from('orders').select('*').eq('room_id', activeRoom.id).neq('status', 'paid');
             const listEl = document.getElementById('active-items-list');
             const btnClose = document.getElementById('btnCloseRoom');
             
@@ -283,12 +314,8 @@
                 let total = 0;
                 listEl.innerHTML = bills.map(b => {
                     total += b.price;
-                    return `
-                    <div class="flex justify-between items-center text-[11px] bg-white p-4 rounded-2xl border border-gray-100 font-bold shadow-sm">
-                        <div class="flex flex-col">
-                            <span class="uppercase text-slate-800">${b.product_name}</span>
-                            <span class="text-[9px] text-blue-500 uppercase italic">${b.status}</span>
-                        </div>
+                    return `<div class="flex justify-between items-center text-[11px] bg-white p-4 rounded-2xl border border-gray-100 font-bold shadow-sm">
+                        <div class="flex flex-col"><span class="uppercase text-slate-800">${b.product_name}</span></div>
                         <span class="text-blue-600">Rp ${b.price.toLocaleString()}</span>
                     </div>`;
                 }).join('');
@@ -321,7 +348,6 @@
 
         async function saveAndPrintOrder() {
             if(!currentOrderProduct || !activeRoom) return alert("Pilih produk!");
-            
             const staffId = document.getElementById('select-staff').value;
             const staffName = document.getElementById('select-staff').options[document.getElementById('select-staff').selectedIndex].text;
 
@@ -335,7 +361,7 @@
             }]);
 
             if(!error) {
-                // Skenario Cetak Slip
+                document.getElementById('p-title').innerText = "ORDER SLIP";
                 document.getElementById('p-outlet-title').innerText = selectedOutlet.name;
                 document.getElementById('p-date').innerText = new Date().toLocaleString();
                 document.getElementById('p-room').innerText = activeRoom.name;
@@ -343,99 +369,118 @@
                 document.getElementById('p-items-list').innerHTML = `<b>${currentOrderProduct.name}</b> x 1`;
                 document.getElementById('p-total-section').style.display = "none";
                 window.print();
-
                 currentOrderProduct = null;
                 document.getElementById('new-item-selected').classList.add('hidden');
                 document.querySelectorAll('.selected-card').forEach(c => c.classList.remove('selected-card'));
             }
         }
 
-      async function closeRoom() {
-    if(!activeRoom) return;
-    if(!confirm(`Selesaikan transaksi untuk ${activeRoom.name} dan cetak struk?`)) return;
+        async function closeRoom() {
+            if(!activeRoom) return;
+            if(!confirm(`Selesaikan transaksi untuk ${activeRoom.name}?`)) return;
 
-    // 1. Ambil data semua pesanan yang belum lunas di ruangan ini
-    const { data: finalBills, error: fetchError } = await _supabase
-        .from('orders')
-        .select('*, outlets(name), rooms(name), staff(name)')
-        .eq('room_id', activeRoom.id)
-        .neq('status', 'paid');
+            const { data: finalBills } = await _supabase.from('orders').select('*, staff(name)').eq('room_id', activeRoom.id).neq('status', 'paid');
+            if (!finalBills || finalBills.length === 0) return;
 
-    if (fetchError || !finalBills || finalBills.length === 0) {
-        alert("Tidak ada tagihan aktif.");
-        return;
-    }
+            printFinalReceipt(finalBills);
 
-    // 2. Jalankan Proses Cetak Otomatis
-    printFinalReceipt(finalBills);
+            await _supabase.from('orders').update({ status: 'paid' }).eq('room_id', activeRoom.id).neq('status', 'paid');
+            showPage('rooms');
+        }
 
-    // 3. Update status menjadi 'paid' di database
-    const { error: updateError } = await _supabase
-        .from('orders')
-        .update({ status: 'paid' })
-        .eq('room_id', activeRoom.id)
-        .neq('status', 'paid');
-
-    if(!updateError) {
-        showPage('rooms');
-    } else {
-        alert("Gagal mengakhiri transaksi: " + updateError.message);
-    }
-}
         function printFinalReceipt(orders) {
-    const first = orders[0];
-    const total = orders.reduce((sum, item) => sum + item.price, 0);
-    
-    // Set Header & Informasi
-    document.getElementById('p-title').innerText = "RECEIPT";
-    document.getElementById('p-outlet-title').innerText = selectedOutlet.name;
-    document.getElementById('p-date').innerText = new Date().toLocaleString('id-ID');
-    document.getElementById('p-room').innerText = activeRoom.name;
-    document.getElementById('p-staff').innerText = first.staff?.name || "-";
-    
-    // Tampilkan Section Total (karena saat order slip section ini mungkin di-hide)
-    document.getElementById('p-total-section').style.display = "block";
-    document.getElementById('p-total-price').innerText = total.toLocaleString();
+            const total = orders.reduce((sum, item) => sum + item.price, 0);
+            document.getElementById('p-title').innerText = "RECEIPT";
+            document.getElementById('p-outlet-title').innerText = selectedOutlet.name;
+            document.getElementById('p-date').innerText = new Date().toLocaleString();
+            document.getElementById('p-room').innerText = activeRoom.name;
+            document.getElementById('p-staff').innerText = orders[0].staff?.name || "-";
+            document.getElementById('p-total-section').style.display = "block";
+            document.getElementById('p-total-price').innerText = total.toLocaleString();
+            document.getElementById('p-items-list').innerHTML = orders.map(item => `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                    <span style="text-transform: uppercase;">${item.product_name}</span>
+                    <span>${item.price.toLocaleString()}</span>
+                </div>`).join('');
+            window.print();
+        }
 
-    // Generate List Item
-    const itemsHtml = orders.map(item => `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="text-transform: uppercase;">${item.product_name}</span>
-            <span>${item.price.toLocaleString()}</span>
-        </div>
-    `).join('');
-    
-    document.getElementById('p-items-list').innerHTML = itemsHtml;
+        async function loadClosingReport() {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            document.getElementById('closing-date-label').innerText = `Laporan: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}`;
 
-    // Trigger Print Browser
-    window.print();
-}
+            const { data, error } = await _supabase.from('orders')
+                .select('*')
+                .eq('outlet_id', selectedOutlet.id)
+                .eq('status', 'paid')
+                .gte('created_at', today.toISOString());
+
+            const summary = {};
+            let grandTotal = 0, totalQty = 0;
+
+            if(data) {
+                data.forEach(o => {
+                    if (!summary[o.product_name]) summary[o.product_name] = { qty: 0, subtotal: 0 };
+                    summary[o.product_name].qty += 1;
+                    summary[o.product_name].subtotal += o.price;
+                    grandTotal += o.price;
+                    totalQty += 1;
+                });
+            }
+
+            closingData = { total: grandTotal, totalQty, items: Object.entries(summary).map(([name, val]) => ({ name, ...val })) };
+
+            document.getElementById('close-total-omzet').innerText = `Rp ${grandTotal.toLocaleString()}`;
+            document.getElementById('close-total-items').innerText = `${totalQty} Qty`;
+            document.getElementById('closing-items-body').innerHTML = closingData.items.map(item => `
+                <tr>
+                    <td class="p-6 uppercase">${item.name}</td>
+                    <td class="p-6 text-center text-blue-600">${item.qty}</td>
+                    <td class="p-6 text-right font-black">Rp ${item.subtotal.toLocaleString()}</td>
+                </tr>`).join('') || '<tr><td colspan="3" class="p-10 text-center opacity-30">Belum ada data</td></tr>';
+        }
+
+        function printClosingReport() {
+            if (closingData.items.length === 0) return alert("Data kosong");
+            document.getElementById('p-title').innerText = "LAPORAN CLOSING";
+            document.getElementById('p-total-section').style.display = "block";
+            document.getElementById('p-total-price').innerText = closingData.total.toLocaleString();
+            document.getElementById('p-items-list').innerHTML = closingData.items.map(item => `
+                <div style="display: flex; justify-content: space-between; font-size: 9px;">
+                    <span>${item.qty}x ${item.name}</span>
+                    <span>${item.subtotal.toLocaleString()}</span>
+                </div>`).join('');
+            window.print();
+        }
+
         function filterBySearch() {
             const keyword = document.getElementById('search-input').value.toLowerCase();
-            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword));
-            renderProducts(filtered);
+            renderProducts(allProducts.filter(p => p.name.toLowerCase().includes(keyword)));
         }
 
         function showPage(page) {
             document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
             document.getElementById(`page-${page}`).classList.remove('hidden');
+            
+            document.querySelectorAll('aside nav button').forEach(btn => btn.classList.remove('active-menu'));
+            const activeBtn = document.getElementById(`menu-${page}`);
+            if(activeBtn) activeBtn.classList.add('active-menu');
+
             if(page === 'rooms') { activeRoom = null; renderRooms(); }
             if(page === 'dashboard') loadHistory();
+            if(page === 'closing') loadClosingReport();
         }
 
         async function loadHistory() {
-            const tbody = document.getElementById('history-body');
-            tbody.innerHTML = '<tr><td colspan="4" class="p-10 text-center animate-pulse">Memuat...</td></tr>';
             const { data } = await _supabase.from('orders').select('*, rooms(name)').eq('status', 'paid').order('created_at', { ascending: false }).limit(30);
-            if(data) {
-                tbody.innerHTML = data.map(o => `
-                    <tr>
-                        <td class="p-6 font-mono opacity-50">${new Date(o.created_at).toLocaleTimeString()}</td>
-                        <td class="p-6 uppercase">${o.product_name}</td>
-                        <td class="p-6"><span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[9px] font-black uppercase">${o.rooms?.name || '-'}</span></td>
-                        <td class="p-6 text-right font-black italic">Rp ${o.price.toLocaleString()}</td>
-                    </tr>`).join('');
-            }
+            document.getElementById('history-body').innerHTML = data?.map(o => `
+                <tr>
+                    <td class="p-6 font-mono opacity-50">${new Date(o.created_at).toLocaleTimeString()}</td>
+                    <td class="p-6 uppercase">${o.product_name}</td>
+                    <td class="p-6 uppercase text-blue-600">${o.rooms?.name || '-'}</td>
+                    <td class="p-6 text-right font-black italic">Rp ${o.price.toLocaleString()}</td>
+                </tr>`).join('') || '';
         }
 
         init();
