@@ -237,6 +237,63 @@
             }
         }
 
+        // --- FUNGSI IMPORT EXCEL ---
+async function importExcel(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const outlet = document.getElementById('p-outlet-filter').value;
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+            // Format data sesuai kolom di Supabase
+            const formatted = json.map(row => ({
+                name: row["Nama Produk"] || row["name"],
+                price: parseInt(row["Harga"] || row["price"]) || 0,
+                stock: parseInt(row["Stok"] || row["stock"]) || 0,
+                category: row["Kategori"] || row["category"] || "Makanan",
+                outlet_name: outlet
+            })).filter(item => item.name); // Pastikan nama tidak kosong
+
+            if (formatted.length === 0) {
+                alert("Data kosong atau format kolom salah! Gunakan kolom: Nama Produk, Harga, Stok, Kategori");
+                return;
+            }
+
+            const { error } = await _supabase.from('products').insert(formatted);
+
+            if (error) throw error;
+
+            alert(`Berhasil mengimpor ${formatted.length} produk ke ${outlet}`);
+            loadProductTable();
+            event.target.value = ''; // Reset input file
+        } catch (err) {
+            console.error("Import Error:", err);
+            alert("Gagal impor: " + err.message);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// Tambahkan juga fungsi download template agar user tidak salah format
+function downloadTemplate() {
+    const data = [
+        ["Nama Produk", "Harga", "Stok", "Kategori"],
+        ["Contoh Produk A", 15000, 100, "Makanan"],
+        ["Contoh Produk B", 10000, 50, "Minuman"]
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "Template_Produk_Lunox.xlsx");
+}
+
         // --- LAPORAN & EXPORT ---
         async function loadReports() {
             const start = document.getElementById('f-start').value;
