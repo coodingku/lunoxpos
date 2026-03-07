@@ -194,23 +194,27 @@
             }
         }
 
-    function initRealtimeSubscription() {
+   function initRealtimeSubscription() {
     console.log("Memulai Koneksi Realtime...");
     
-    // Langsung buka channel tanpa hapus channel sebelumnya untuk test
-    const channel = _supabase.channel('admin-feed')
+    _supabase.channel('update-order')
         .on('postgres_changes', 
-            { event: 'INSERT', schema: 'public', table: 'orders' }, 
-            async (payload) => {
-                console.log("ADA ORDER BARU!", payload);
-                loadActiveOrders(); // Gunakan refresh total agar lebih aman
+            { event: '*', schema: 'public', table: 'orders' }, 
+            (payload) => {
+                console.log("Perubahan terdeteksi!", payload);
+                // Langsung panggil fungsi load data agar tampilan Admin segar kembali
+                loadActiveOrders(); 
+                
+                // Bunyikan suara jika ada order baru (INSERT)
+                if (payload.eventType === 'INSERT' && audioActive) {
+                    const snd = document.getElementById('notif-sound');
+                    snd.play().catch(e => console.log(e));
+                    speakNow("Pesanan baru masuk");
+                }
             }
         )
         .subscribe((status) => {
             console.log("Status Koneksi Realtime:", status);
-            if (status === 'TIMED_OUT') {
-                console.error("Koneksi Lemot atau Diblokir Supabase!");
-            }
         });
 }
         async function loadActiveOrders() {
