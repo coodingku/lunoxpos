@@ -50,7 +50,9 @@
                     <button onclick="showTab('report')" id="tab-report" class="px-6 py-2 text-xs font-black">LAPORAN</button>
                 </nav>
                 <div class="flex gap-2">
-                    <button id="enable-audio" onclick="activateAudio()" class="bg-yellow-500 text-slate-900 px-5 py-2 rounded-xl text-xs font-black animate-pulse"><i class="fa fa-volume-up"></i></button>
+                    <button id="enable-audio" onclick="activateAudio()" class="bg-yellow-500 text-slate-900 px-5 py-2 rounded-xl text-xs font-black animate-pulse">
+                        <i class="fa fa-volume-up mr-2"></i> AKTIFKAN SUARA
+                    </button>
                     <button onclick="location.reload()" class="bg-red-600 px-5 py-2 rounded-xl text-xs font-black uppercase">Logout</button>
                 </div>
             </div>
@@ -156,14 +158,17 @@
         async function handleLogin() {
             const user = document.getElementById('user-input').value;
             const pass = document.getElementById('pass-input').value;
-            const { data } = await _supabase.from('users').select('*').eq('username', user).eq('password', pass).single();
+            const { data, error } = await _supabase.from('users').select('*').eq('username', user).eq('password', pass).single();
+            
             if (data) {
                 userRole = data.role;
                 document.getElementById('login-overlay').classList.add('hidden');
                 document.getElementById('main-app').classList.remove('hidden');
                 document.getElementById('role-display').innerText = `Login As: ${userRole}`;
                 loadActiveOrders();
-            } else { document.getElementById('login-error').classList.remove('hidden'); }
+            } else { 
+                document.getElementById('login-error').classList.remove('hidden'); 
+            }
         }
 
         // --- MONITORING ---
@@ -173,11 +178,25 @@
         }
 
         async function loadActiveOrders() {
-            const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('status', 'pending').order('created_at', { ascending: false });
-            const feed = document.getElementById('order-feed');
-            feed.innerHTML = '';
-            const filtered = currentMonitorFilter === 'all' ? data : data.filter(o => o.outlets?.name === currentMonitorFilter);
-            filtered.forEach(o => appendToFeed(o, false));
+            try {
+                const { data, error } = await _supabase
+                    .from('orders')
+                    .select('*, outlets(name), staff(name), rooms(name)')
+                    .eq('status', 'pending')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                const feed = document.getElementById('order-feed');
+                feed.innerHTML = '';
+                
+                if (data) {
+                    const filtered = currentMonitorFilter === 'all' ? data : data.filter(o => o.outlets?.name === currentMonitorFilter);
+                    filtered.forEach(o => appendToFeed(o, false));
+                }
+            } catch (err) {
+                console.error("Monitoring Error:", err.message);
+            }
         }
 
         function appendToFeed(order, isNew) {
@@ -189,15 +208,23 @@
             card.id = `order-${order.id}`;
             card.className = `bg-slate-800 p-5 rounded-3xl shadow-xl border-b-4 border-slate-700 ${border} ${isNew ? 'animate-new' : ''}`;
             card.innerHTML = `
-                <div class="flex justify-between mb-2"><span class="text-[10px] font-black text-blue-400 uppercase">${order.outlets?.name}</span>
-                <button onclick="completeOrder('${order.id}')" class="text-green-500 bg-green-500/10 p-2 rounded-xl"><i class="fa fa-check"></i></button></div>
+                <div class="flex justify-between mb-2">
+                    <span class="text-[10px] font-black text-blue-400 uppercase">${order.outlets?.name || 'OUTLET'}</span>
+                    <button onclick="completeOrder('${order.id}')" class="text-green-500 bg-green-500/10 p-2 rounded-xl hover:bg-green-500 hover:text-white transition">
+                        <i class="fa fa-check"></i>
+                    </button>
+                </div>
                 <h3 class="font-black text-white uppercase text-lg">${order.product_name} <span class="text-yellow-500">x${order.qty || 1}</span></h3>
-                <div class="mt-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest">${order.rooms?.name || '-'} | ${order.staff?.name || '-'}</div>
+                <div class="mt-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                    ${order.rooms?.name || '-'} | ${order.staff?.name || '-'}
+                </div>
             `;
+            
             isNew ? feed.prepend(card) : feed.appendChild(card);
-            if(isNew && audioActive) { 
-                document.getElementById('notif-sound').play();
-                speakNow(`Pesanan baru di ${order.outlets?.name}. ${order.product_name}.`);
+            
+            if (isNew && audioActive) { 
+                document.getElementById('notif-sound').play().catch(()=>{});
+                speakNow(`Pesanan baru di ${order.outlets?.name || ''}. ${order.product_name}.`);
             }
         }
 
@@ -206,6 +233,8 @@
             const outlet = document.getElementById('p-outlet-filter').value;
             const { data } = await _supabase.from('products').select('*').eq('outlet_name', outlet).order('name');
             const tbody = document.getElementById('product-list-body');
+            
+            if (!data) return;
             tbody.innerHTML = data.map(p => `
                 <tr class="border-b border-slate-700 hover:bg-slate-900/50">
                     <td class="p-4 font-bold text-white uppercase">${p.name}</td>
@@ -222,11 +251,15 @@
             const outlet = document.getElementById('p-outlet-filter').value;
             const name = document.getElementById('p-name').value;
             const price = parseInt(document.getElementById('p-price').value);
-            const stock = parseInt(document.getElementById('p-stock').value);
+            const stock = parseInt(document.getElementById('p-stock').value) || 0;
             const category = document.getElementById('p-cat').value;
+
             if(!name || !price) return alert("Nama & Harga wajib diisi!");
+            
             await _supabase.from('products').insert([{ name, price, stock, category, outlet_name: outlet }]);
             document.getElementById('p-name').value = '';
+            document.getElementById('p-price').value = '';
+            document.getElementById('p-stock').value = '';
             loadProductTable();
         }
 
@@ -237,64 +270,49 @@
             }
         }
 
-        // --- FUNGSI IMPORT EXCEL ---
-async function importExcel(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+        // --- IMPORT EXCEL ---
+        async function importExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
-    const outlet = document.getElementById('p-outlet-filter').value;
-    const reader = new FileReader();
+            const outlet = document.getElementById('p-outlet-filter').value;
+            const reader = new FileReader();
 
-    reader.onload = async (e) => {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheetName = workbook.SheetNames[0];
-            const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+            reader.onload = async (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
-            // Format data sesuai kolom di Supabase
-            const formatted = json.map(row => ({
-                name: row["Nama Produk"] || row["name"],
-                price: parseInt(row["Harga"] || row["price"]) || 0,
-                stock: parseInt(row["Stok"] || row["stock"]) || 0,
-                category: row["Kategori"] || row["category"] || "Makanan",
-                outlet_name: outlet
-            })).filter(item => item.name); // Pastikan nama tidak kosong
+                    const formatted = json.map(row => ({
+                        name: row["Nama Produk"] || row["name"],
+                        price: parseInt(row["Harga"] || row["price"]) || 0,
+                        stock: parseInt(row["Stok"] || row["stock"]) || 0,
+                        category: row["Kategori"] || row["category"] || "Makanan",
+                        outlet_name: outlet
+                    })).filter(item => item.name);
 
-            if (formatted.length === 0) {
-                alert("Data kosong atau format kolom salah! Gunakan kolom: Nama Produk, Harga, Stok, Kategori");
-                return;
-            }
+                    const { error } = await _supabase.from('products').insert(formatted);
+                    if (error) throw error;
 
-            const { error } = await _supabase.from('products').insert(formatted);
-
-            if (error) throw error;
-
-            alert(`Berhasil mengimpor ${formatted.length} produk ke ${outlet}`);
-            loadProductTable();
-            event.target.value = ''; // Reset input file
-        } catch (err) {
-            console.error("Import Error:", err);
-            alert("Gagal impor: " + err.message);
+                    alert(`Berhasil impor ${formatted.length} produk`);
+                    loadProductTable();
+                } catch (err) {
+                    alert("Error Import: " + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
         }
-    };
-    reader.readAsArrayBuffer(file);
-}
 
-// Tambahkan juga fungsi download template agar user tidak salah format
-function downloadTemplate() {
-    const data = [
-        ["Nama Produk", "Harga", "Stok", "Kategori"],
-        ["Contoh Produk A", 15000, 100, "Makanan"],
-        ["Contoh Produk B", 10000, 50, "Minuman"]
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template");
-    XLSX.writeFile(wb, "Template_Produk_Lunox.xlsx");
-}
+        function downloadTemplate() {
+            const data = [["Nama Produk", "Harga", "Stok", "Kategori"], ["Es Teh Manis", 5000, 100, "Minuman"]];
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Template");
+            XLSX.writeFile(wb, "Template_Produk_Lunox.xlsx");
+        }
 
-        // --- LAPORAN & EXPORT ---
+        // --- REPORTING ---
         async function loadReports() {
             const start = document.getElementById('f-start').value;
             const end = document.getElementById('f-end').value;
@@ -304,12 +322,11 @@ function downloadTemplate() {
             if (start) query = query.gte('created_at', start + 'T00:00:00');
             if (end) query = query.lte('created_at', end + 'T23:59:59');
 
-            const { data, error } = await query;
-            if (error) return console.error(error);
+            const { data } = await query;
+            if (!data) return;
 
-            let filtered = out === 'all' ? data : data.filter(o => o.outlets?.name === out);
-            const tbody = document.getElementById('report-body');
-            tbody.innerHTML = filtered.map(o => `
+            const filtered = out === 'all' ? data : data.filter(o => o.outlets?.name === out);
+            document.getElementById('report-body').innerHTML = filtered.map(o => `
                 <tr class="border-b border-slate-700 hover:bg-slate-900/50">
                     <td class="p-4 text-[10px] text-slate-400">${new Date(o.created_at).toLocaleString('id-ID')}</td>
                     <td class="p-4 font-black text-orange-400 uppercase text-[10px]">${o.outlets?.name || '-'}</td>
@@ -319,41 +336,43 @@ function downloadTemplate() {
                     <td class="p-4 text-center no-print">
                         <button onclick="printOrder('${o.id}')" class="text-white bg-slate-700 p-2 rounded-lg hover:bg-blue-600 transition"><i class="fa fa-print"></i></button>
                     </td>
-                </tr>
-            `).join('');
+                </tr>`).join('');
         }
 
         function exportToExcel() {
-            const table = document.getElementById('main-report-table');
-            const wb = XLSX.utils.table_to_book(table, { sheet: "Laporan" });
-            XLSX.writeFile(wb, `Laporan_Lunox_${new Date().toISOString().slice(0,10)}.xlsx`);
-        }
-
-        function exportToPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.text("LAPORAN PENJUALAN LUNOX", 14, 20);
-            doc.autoTable({ 
-                html: '#main-report-table', 
-                startY: 25,
-                didParseCell: (data) => { if (data.column.index === 5) data.cell.text = ''; }
-            });
-            doc.save("Laporan_Lunox.pdf");
-        }
-
-        async function printOrder(id) {
-            const { data } = await _supabase.from('orders').select('*, outlets(name)').eq('id', id).single();
-            const win = window.open('', '', 'width=300,height=450');
-            win.document.write(`<div style="font-family:monospace;text-align:center;"><h3>LUNOX</h3><p>${data.outlets.name}</p><hr><p>${data.product_name} x${data.qty}</p><p>Total: Rp ${(data.price * data.qty).toLocaleString()}</p><hr></div>`);
-            win.print(); win.close();
+            XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById('main-report-table')), "Laporan_Lunox.xlsx");
         }
 
         async function completeOrder(id) {
-            await _supabase.from('orders').update({ status: 'completed' }).eq('id', id);
-            document.getElementById(`order-${id}`)?.remove();
+            const { error } = await _supabase.from('orders').update({ status: 'completed' }).eq('id', id);
+            if (!error) document.getElementById(`order-${id}`)?.remove();
         }
 
-        // --- EXTRAS ---
+        // --- AUDIO SYSTEM ---
+        function activateAudio() {
+            audioActive = true;
+            const btn = document.getElementById('enable-audio');
+            btn.classList.replace('bg-yellow-500', 'bg-green-600');
+            btn.classList.remove('animate-pulse');
+            btn.innerHTML = '<i class="fa fa-check-circle mr-2"></i> SUARA AKTIF';
+            speakNow("Sistem pemanggilan suara telah diaktifkan.");
+        }
+
+        function speakNow(text) {
+            if (!audioActive) return;
+            window.speechSynthesis.cancel(); // Hentikan suara sebelumnya agar tidak tumpang tindih
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.lang = 'id-ID';
+            msg.rate = 0.9;
+            window.speechSynthesis.speak(msg);
+        }
+
+        // --- REALTIME ---
+        _supabase.channel('admin-pos').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async (p) => {
+            const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('id', p.new.id).single();
+            if (data && data.status === 'pending') appendToFeed(data, true);
+        }).subscribe();
+
         function showTab(t) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-tab'));
@@ -361,26 +380,6 @@ function downloadTemplate() {
             document.getElementById(`tab-${t}`).classList.add('active-tab');
             if(t === 'inventory') loadProductTable();
         }
-
-        function activateAudio() {
-            audioActive = true;
-            document.getElementById('enable-audio').classList.replace('bg-yellow-500', 'bg-green-600');
-            speakNow("Sistem Aktif");
-        }
-
-        function speakNow(text) {
-            if (!audioActive) return;
-            const msg = new SpeechSynthesisUtterance(text);
-            msg.lang = 'id-ID';
-            window.speechSynthesis.speak(msg);
-        }
-
-        // REALTIME SUBSCRIPTION
-        _supabase.channel('admin-pos').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async (p) => {
-            const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('id', p.new.id).single();
-            if (data && data.status === 'pending') appendToFeed(data, true);
-        }).subscribe();
-
     </script>
 </body>
 </html>
