@@ -101,15 +101,14 @@
             <div class="flex justify-between items-end mb-8">
                 <div>
                     <h2 class="text-3xl font-black uppercase italic tracking-tighter">Floor Map</h2>
-                    <p id="floor-outlet-name" class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">OUTLET: -</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pilih meja atau ruangan untuk memulai</p>
                 </div>
-                <div class="flex gap-4 text-[10px] font-bold uppercase italic">
-                    <span class="flex items-center gap-2"><span class="w-4 h-4 bg-yellow-500 rounded shadow-lg shadow-yellow-500/20"></span> Aktif</span>
-                    <span class="flex items-center gap-2"><span class="w-4 h-4 bg-blue-600 rounded shadow-lg shadow-blue-500/20"></span> Kosong</span>
+                <div class="flex gap-2 text-[10px] font-bold">
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 bg-blue-600 rounded-full"></span> Terisi</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 bg-white border border-gray-300 rounded-full"></span> Kosong</span>
                 </div>
             </div>
-            <div id="room-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-6">
-                </div>
+            <div id="room-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6"></div>
         </div>
 
         <div id="page-order" class="p-6 lg:p-10 page-content hidden">
@@ -224,11 +223,9 @@
             selectedOutlet = { id, name };
             document.getElementById('outlet-selector').classList.add('hidden');
             document.getElementById('active-outlet-badge').innerText = name;
-            document.getElementById('floor-outlet-name').innerText = `OUTLET: ${name}`;
             
-            // Ambil Data Berdasarkan Outlet
             const [r, s, p] = await Promise.all([
-                _supabase.from('rooms').select('*').eq('outlet_name', name).order('name'),
+                _supabase.from('rooms').select('*').order('name'),
                 _supabase.from('staff').select('*').order('name'),
                 _supabase.from('products').select('*').eq('outlet_name', name).order('name')
             ]);
@@ -243,27 +240,17 @@
 
         async function renderRooms() {
             const grid = document.getElementById('room-grid');
-            
-            // Cek order yang statusnya 'pending' untuk menentukan ruangan mana yang AKTIF
             const { data: activeOrders } = await _supabase.from('orders').select('room_id').eq('status', 'pending');
             const occupiedRoomIds = activeOrders ? [...new Set(activeOrders.map(o => o.room_id))] : [];
 
             grid.innerHTML = allRooms.map(room => {
                 const isOccupied = occupiedRoomIds.includes(room.id);
-                
-                // LOGIKA WARNA: Kuning (Aktif), Biru (Belum Aktif)
-                const cardBg = isOccupied ? 'bg-yellow-500 shadow-yellow-500/20' : 'bg-blue-600 shadow-blue-500/20';
-                const textColor = isOccupied ? 'text-slate-900' : 'text-white';
-                const iconClass = isOccupied ? 'fa-door-open animate-pulse' : 'fa-door-closed';
-
                 return `
                 <div onclick="openRoom('${room.id}', '${room.name}')" class="group cursor-pointer transition-all active:scale-95">
-                    <div class="${cardBg} ${textColor} p-6 rounded-[30px] shadow-lg text-center h-36 flex flex-col justify-center items-center relative overflow-hidden transition-all hover:-translate-y-1 border-b-4 border-black/10">
-                        <i class="fa ${iconClass} text-2xl mb-2"></i>
-                        <span class="font-black text-[11px] uppercase tracking-tighter leading-none">${room.name}</span>
-                        <span class="text-[8px] mt-1 font-bold opacity-70 italic uppercase">
-                            ${isOccupied ? 'Occupied' : 'Vacant'}
-                        </span>
+                    <div class="${isOccupied ? 'bg-blue-600 text-white shadow-blue-200' : 'bg-white text-slate-400 border border-gray-100 hover:border-blue-300'} p-8 rounded-[35px] shadow-lg text-center h-40 flex flex-col justify-center items-center relative overflow-hidden transition-all">
+                        <i class="fa ${isOccupied ? 'fa-door-open' : 'fa-door-closed'} text-3xl mb-3 group-hover:scale-110 transition-transform"></i>
+                        <span class="font-black text-xs uppercase tracking-tighter">${room.name}</span>
+                        ${isOccupied ? '<div class="absolute top-3 right-3 w-2 h-2 bg-white rounded-full animate-ping"></div>' : ''}
                     </div>
                 </div>`;
             }).join('');
@@ -343,6 +330,7 @@
             }]);
 
             if(!error) {
+                // Prepare Print
                 document.getElementById('p-title').innerText = "ORDER SLIP";
                 document.getElementById('p-outlet-title').innerText = selectedOutlet.name;
                 document.getElementById('p-date').innerText = new Date().toLocaleString();
