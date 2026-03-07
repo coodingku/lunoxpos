@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUNOX POS - Auto-Print Order</title>
+    <title>LUNOX POS - Professional System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -56,15 +56,15 @@
 
     <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex border-r border-slate-800">
         <div class="p-6 border-b border-slate-800">
-            <div class="text-2xl font-black text-white italic uppercase">LUNOX <span class="text-blue-500">POS</span></div>
-            <div id="active-outlet-badge" class="mt-2 text-[10px] bg-blue-600 text-white px-2 py-1 rounded inline-block font-bold">OUTLET</div>
+            <div class="text-2xl font-black text-white italic uppercase leading-none">LUNOX <span class="text-blue-500">POS</span></div>
+            <div id="active-outlet-badge" class="mt-2 text-[10px] bg-blue-600 text-white px-2 py-1 rounded inline-block font-bold">...</div>
         </div>
         <nav class="mt-4 flex-1">
             <a href="#" onclick="showPage('rooms')" id="menu-rooms" class="flex items-center px-6 py-4 active-menu transition">
-                <i class="fa-solid fa-door-closed mr-3"></i> Daftar Room
+                <i class="fa-solid fa-door-closed mr-3 w-5"></i> Daftar Room
             </a>
             <a href="#" onclick="showPage('dashboard')" id="menu-dashboard" class="flex items-center px-6 py-4 hover:bg-slate-800 transition">
-                <i class="fa-solid fa-history mr-3"></i> Riwayat Paid
+                <i class="fa-solid fa-history mr-3 w-5"></i> Riwayat Transaksi
             </a>
         </nav>
         <button onclick="location.reload()" class="p-6 text-xs font-bold text-slate-500 hover:text-white border-t border-slate-800 text-left uppercase">
@@ -75,7 +75,7 @@
     <main class="flex-1 overflow-y-auto">
         
         <div id="page-rooms" class="p-8 page-content">
-            <h2 class="text-2xl font-black mb-6 uppercase italic tracking-tighter">Pilih Room</h2>
+            <h2 class="text-2xl font-black mb-6 uppercase italic tracking-tighter">Pilih Room / Meja</h2>
             <div id="room-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
         </div>
 
@@ -84,13 +84,16 @@
                 <button onclick="showPage('rooms')" class="bg-white p-3 rounded-2xl shadow-sm hover:bg-gray-100 transition">
                     <i class="fa fa-arrow-left"></i>
                 </button>
-                <h2 id="current-room-title" class="text-2xl font-black uppercase italic text-blue-600">ROOM NAME</h2>
+                <div>
+                    <h2 id="current-room-title" class="text-2xl font-black uppercase italic text-blue-600">NAMA ROOM</h2>
+                    <p class="text-[10px] font-bold text-gray-400">PILIH MENU DAN TAMBAHKAN PESANAN</p>
+                </div>
             </div>
 
             <div class="flex flex-col lg:flex-row gap-6">
                 <div class="flex-1 space-y-6">
                     <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
-                        <input type="text" id="search-input" oninput="filterBySearch()" placeholder="Cari menu..." class="w-full px-6 py-3 bg-gray-50 rounded-2xl border-none ring-1 ring-gray-200 outline-none font-bold text-sm">
+                        <input type="text" id="search-input" oninput="filterBySearch()" placeholder="Cari menu favorit..." class="w-full px-6 py-3 bg-gray-50 rounded-2xl border-none ring-1 ring-gray-200 outline-none font-bold text-sm">
                     </div>
                     <div id="product-grid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"></div>
                 </div>
@@ -98,15 +101,15 @@
                 <div class="w-full lg:w-96">
                     <div class="bg-white p-6 rounded-3xl shadow-xl border border-gray-100 sticky top-4">
                         <div class="mb-4">
-                            <label class="text-[10px] font-black text-gray-400 uppercase">Staff In-Charge</label>
+                            <label class="text-[10px] font-black text-gray-400 uppercase">Petugas</label>
                             <select id="select-staff" class="w-full p-3 bg-gray-50 rounded-xl border-none text-xs font-bold outline-none ring-1 ring-gray-200 mt-1"></select>
                         </div>
 
                         <div id="bill-section" class="border-t border-dashed pt-4 mb-6">
-                            <p class="text-[10px] font-black text-gray-400 mb-3 uppercase italic">Bill Terdaftar:</p>
+                            <p class="text-[10px] font-black text-gray-400 mb-3 uppercase italic">Pesanan Terdaftar:</p>
                             <div id="active-items-list" class="space-y-2 mb-4 max-h-60 overflow-y-auto"></div>
-                            <div class="flex justify-between items-center bg-slate-900 text-white p-4 rounded-2xl">
-                                <span class="text-xs font-bold">TOTAL:</span>
+                            <div class="flex justify-between items-center bg-slate-900 text-white p-4 rounded-2xl shadow-lg">
+                                <span class="text-xs font-bold uppercase">Total Bill</span>
                                 <span id="room-total-bill" class="font-black text-lg text-blue-400">Rp 0</span>
                             </div>
                         </div>
@@ -118,10 +121,10 @@
 
                         <div class="grid grid-cols-1 gap-2">
                             <button onclick="saveAndPrintOrder()" id="btnSend" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black hover:bg-blue-700 active:scale-95 transition-all uppercase text-xs">
-                                <i class="fa fa-print mr-1"></i> Tambah & Print Slip
+                                <i class="fa fa-print mr-1"></i> Simpan & Print Slip
                             </button>
                             <button onclick="closeRoom()" id="btnCloseRoom" class="w-full bg-red-600 text-white py-3 rounded-2xl font-black hover:bg-red-700 active:scale-95 transition-all uppercase text-xs hidden">
-                                <i class="fa fa-receipt mr-1"></i> Close & Print Final
+                                <i class="fa fa-receipt mr-1"></i> Bayar & Cetak Bill
                             </button>
                         </div>
                     </div>
@@ -130,15 +133,15 @@
         </div>
 
         <div id="page-dashboard" class="p-8 page-content hidden">
-             <h2 class="text-2xl font-black mb-6 uppercase italic">Riwayat Selesai</h2>
+             <h2 class="text-2xl font-black mb-6 uppercase italic">Riwayat Selesai (Paid)</h2>
              <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
                 <table class="w-full text-left">
                     <thead class="bg-slate-900 text-slate-400 text-[10px] font-black uppercase">
                         <tr>
-                            <th class="p-4">Waktu</th>
-                            <th class="p-4">Item</th>
+                            <th class="p-4">Jam</th>
+                            <th class="p-4">Pesanan</th>
                             <th class="p-4">Room</th>
-                            <th class="p-4 text-right">Harga</th>
+                            <th class="p-4 text-right">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody id="history-body" class="text-xs font-bold divide-y divide-gray-50"></tbody>
@@ -149,12 +152,14 @@
     </main>
 
     <script>
+        // CONFIG SUPABASE
         const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
         let allProducts = [], allRooms = [], selectedOutlet = null, activeRoom = null, currentOrderProduct = null;
 
+        // LOAD AWAL: PILIH OUTLET
         async function init() {
             const { data: outlets } = await _supabase.from('outlets').select('*');
             document.getElementById('outlet-list-btns').innerHTML = outlets.map(o => `
@@ -164,26 +169,31 @@
             `).join('');
         }
 
+        // SETELAH PILIH OUTLET
         async function chooseOutlet(id, name) {
             selectedOutlet = { id, name };
             document.getElementById('outlet-selector').classList.add('hidden');
             document.getElementById('active-outlet-badge').innerText = name;
+            
             const [r, s, p] = await Promise.all([
                 _supabase.from('rooms').select('*'),
                 _supabase.from('staff').select('*'),
                 _supabase.from('products').select('*').eq('outlet_name', name)
             ]);
+
             allRooms = r.data || [];
             allProducts = p.data || [];
             document.getElementById('select-staff').innerHTML = s.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+            
             renderRooms();
             renderProducts(allProducts);
         }
 
+        // TAMPILKAN DAFTAR ROOM
         async function renderRooms() {
             const grid = document.getElementById('room-grid');
             const { data: activeOrders } = await _supabase.from('orders').select('room_id').eq('status', 'pending');
-            const occupiedRoomIds = [...new Set(activeOrders.map(o => o.room_id))];
+            const occupiedRoomIds = activeOrders ? [...new Set(activeOrders.map(o => o.room_id))] : [];
 
             grid.innerHTML = allRooms.map(room => {
                 const isOccupied = occupiedRoomIds.includes(room.id);
@@ -192,11 +202,13 @@
                     <div class="${isOccupied ? 'bg-blue-600 text-white shadow-blue-200' : 'bg-white text-slate-400 border border-gray-200'} p-6 rounded-3xl shadow-lg text-center h-32 flex flex-col justify-center items-center">
                         <i class="fa ${isOccupied ? 'fa-door-open' : 'fa-door-closed'} text-2xl mb-2"></i>
                         <span class="font-black text-[10px] uppercase">${room.name}</span>
+                        ${isOccupied ? '<span class="text-[7px] mt-1 bg-blue-400 px-2 py-0.5 rounded-full">DITEMPATI</span>' : ''}
                     </div>
                 </div>`;
             }).join('');
         }
 
+        // BUKA ROOM UNTUK ORDER
         async function openRoom(id, name) {
             activeRoom = { id, name };
             document.getElementById('current-room-title').innerText = name;
@@ -204,8 +216,9 @@
             await refreshRoomBill();
         }
 
+        // REFRESH DAFTAR PESANAN DI SISI KANAN
         async function refreshRoomBill() {
-            const { data: bills } = await _supabase.from('orders').select('*').eq('room_id', activeRoom.id).eq('status', 'pending');
+            const { data: bills, error } = await _supabase.from('orders').select('*').eq('room_id', activeRoom.id).eq('status', 'pending');
             const listEl = document.getElementById('active-items-list');
             const btnClose = document.getElementById('btnCloseRoom');
             
@@ -226,15 +239,18 @@
             }
         }
 
+        // TAMPILKAN MENU PRODUK
         function renderProducts(items) {
             const grid = document.getElementById('product-grid');
             const keyword = document.getElementById('search-input').value.trim();
-            const displayItems = keyword === "" ? items.slice(0, 8) : items;
+            const displayItems = keyword === "" ? items.slice(0, 12) : items;
+
             grid.innerHTML = displayItems.map(i => `
-                <div onclick="selectProduct('${i.id}', '${i.name}', ${i.price}, this)" class="bg-white p-4 rounded-3xl border-2 border-transparent shadow-sm hover:border-blue-400 cursor-pointer transition-all active:scale-95">
-                    <p class="font-black text-slate-800 text-[10px] leading-tight uppercase h-8 overflow-hidden">${i.name}</p>
-                    <p class="text-blue-600 font-black text-[10px] mt-2 italic">Rp ${i.price.toLocaleString()}</p>
-                </div>`).join('');
+                <div onclick="selectProduct('${i.id}', '${i.name}', ${i.price}, this)" class="bg-white p-4 rounded-3xl border-2 border-transparent shadow-sm hover:border-blue-400 cursor-pointer transition-all active:scale-95 group">
+                    <p class="font-black text-slate-800 text-[10px] leading-tight uppercase h-8 overflow-hidden mb-2">${i.name}</p>
+                    <p class="text-blue-600 font-black text-[10px] italic">Rp ${i.price.toLocaleString()}</p>
+                </div>
+            `).join('');
         }
 
         function selectProduct(id, name, price, el) {
@@ -246,48 +262,62 @@
             document.getElementById('display-price').innerText = "Rp " + price.toLocaleString();
         }
 
-        // FUNGSI BARU: TAMBAH + AUTO PRINT SLIP
+        // AKSI: TAMBAH ITEM KE DB + PRINT SLIP
         async function saveAndPrintOrder() {
-            if(!currentOrderProduct) return alert("Pilih menu dulu!");
+            if(!currentOrderProduct) return alert("Pilih menu terlebih dahulu!");
+            
             const staffName = document.getElementById('select-staff').options[document.getElementById('select-staff').selectedIndex].text;
             const staffId = document.getElementById('select-staff').value;
 
             const { error } = await _supabase.from('orders').insert([{
-                product_name: currentOrderProduct.name, price: currentOrderProduct.price,
-                room_id: activeRoom.id, staff_id: staffId, outlet_id: selectedOutlet.id, status: 'pending'
+                product_name: currentOrderProduct.name,
+                price: currentOrderProduct.price,
+                room_id: activeRoom.id,
+                staff_id: staffId,
+                outlet_id: selectedOutlet.id,
+                status: 'pending'
             }]);
 
             if(!error) {
-                // Set Data untuk Print Slip Order
+                // Tampilan Struk Order
                 document.getElementById('p-title').innerText = "ORDER SLIP";
                 document.getElementById('p-outlet-title').innerText = selectedOutlet.name;
                 document.getElementById('p-date').innerText = new Date().toLocaleString();
                 document.getElementById('p-room').innerText = activeRoom.name;
                 document.getElementById('p-staff').innerText = staffName;
                 document.getElementById('p-items-list').innerHTML = `<div style="display:flex; justify-content:space-between; font-weight:bold; font-size:16px;">
-                    <span>${currentOrderProduct.name}</span><span>(1)</span>
+                    <span>${currentOrderProduct.name}</span><span>[ 1 ]</span>
                 </div>`;
                 document.getElementById('p-total-section').style.display = "none";
-                document.getElementById('p-footer').innerText = "*** ORDER BERHASIL DIKIRIM ***";
+                document.getElementById('p-footer').innerText = "*** KIRIM KE DAPUR/BAR ***";
 
-                // Print
+                // Trigger Print
                 setTimeout(() => {
                     window.print();
                     currentOrderProduct = null;
                     document.getElementById('new-item-selected').classList.add('hidden');
                     document.querySelectorAll('.selected-card').forEach(c => c.classList.remove('selected-card'));
                     refreshRoomBill();
-                }, 300);
+                }, 200);
+            } else {
+                alert("Gagal menyimpan: " + error.message);
             }
         }
 
+        // AKSI: TUTUP ROOM + PRINT BILL FINAL
         async function closeRoom() {
-            if(!confirm("Close room dan print bill final?")) return;
+            if(!confirm("Proses pembayaran dan tutup room ini?")) return;
+            
             const staffName = document.getElementById('select-staff').options[document.getElementById('select-staff').selectedIndex].text;
+            
+            // Ambil semua item pending di room ini
             const { data: bills } = await _supabase.from('orders').select('*').eq('room_id', activeRoom.id).eq('status', 'pending');
+            
+            // Update status jadi paid
             const { error } = await _supabase.from('orders').update({ status: 'paid' }).eq('room_id', activeRoom.id).eq('status', 'pending');
 
             if(!error) {
+                // Tampilan Struk Final
                 document.getElementById('p-title').innerText = "FINAL BILL";
                 document.getElementById('p-outlet-title').innerText = selectedOutlet.name;
                 document.getElementById('p-date').innerText = new Date().toLocaleString();
@@ -302,21 +332,37 @@
                         <span>${b.product_name}</span><span>${b.price.toLocaleString()}</span>
                     </div>`;
                 }).join('');
+                
                 document.getElementById('p-total-price').innerText = total.toLocaleString();
                 document.getElementById('p-footer').innerText = "*** TERIMA KASIH ***";
 
                 setTimeout(() => {
                     window.print();
                     showPage('rooms');
-                }, 500);
+                }, 300);
             }
         }
 
+        // LOAD DATA HISTORY
         async function loadHistory() {
             const tbody = document.getElementById('history-body');
-            tbody.innerHTML = '<tr><td colspan="4" class="p-10 text-center opacity-30 italic">Memuat...</td></tr>';
-            const { data } = await _supabase.from('orders').select('*, rooms(name)').eq('outlet_id', selectedOutlet.id).eq('status', 'paid').order('created_at', { ascending: false }).limit(50);
-            tbody.innerHTML = data.map(o => `<tr class="hover:bg-slate-50 transition"><td class="p-4 text-slate-400">${new Date(o.created_at).toLocaleTimeString()}</td><td class="p-4 uppercase">${o.product_name}</td><td class="p-4"><span class="bg-blue-50 text-blue-600 px-2 py-0.5 rounded uppercase text-[9px]">${o.rooms?.name}</span></td><td class="p-4 text-right text-blue-600 font-black italic">Rp ${o.price.toLocaleString()}</td></tr>`).join('');
+            tbody.innerHTML = '<tr><td colspan="4" class="p-10 text-center opacity-30 italic">Memuat data...</td></tr>';
+
+            const { data } = await _supabase.from('orders')
+                .select('*, rooms(name)')
+                .eq('outlet_id', selectedOutlet.id)
+                .eq('status', 'paid')
+                .order('created_at', { ascending: false }).limit(30);
+
+            if(data) {
+                tbody.innerHTML = data.map(o => `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-4 text-slate-400">${new Date(o.created_at).toLocaleTimeString()}</td>
+                        <td class="p-4 uppercase">${o.product_name}</td>
+                        <td class="p-4"><span class="bg-blue-50 text-blue-600 px-2 py-0.5 rounded uppercase text-[9px] font-bold">${o.rooms?.name || 'ROOM'}</span></td>
+                        <td class="p-4 text-right text-blue-600 font-black italic">Rp ${o.price.toLocaleString()}</td>
+                    </tr>`).join('');
+            }
         }
 
         function filterBySearch() {
@@ -331,6 +377,7 @@
             document.getElementById(`page-${page}`).classList.remove('hidden');
             const menuBtn = document.getElementById(`menu-${page}`);
             if(menuBtn) menuBtn.classList.add('active-menu');
+            
             if(page === 'rooms') renderRooms();
             if(page === 'dashboard') loadHistory();
         }
