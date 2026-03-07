@@ -8,9 +8,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .outlet-cabana { border-left: 6px solid #f97316; } /* Orange */
-        .outlet-delta { border-left: 6px solid #3b82f6; }  /* Blue */
-        .outlet-lunox { border-left: 6px solid #a855f7; }  /* Purple */
+        .outlet-cabana { border-left: 6px solid #f97316; }
+        .outlet-delta { border-left: 6px solid #3b82f6; }
+        .outlet-lunox { border-left: 6px solid #a855f7; }
         .animate-new { animation: slideIn 0.5s ease-out; }
         @keyframes slideIn {
             from { opacity: 0; transform: translateY(-20px); }
@@ -35,7 +35,7 @@
             </div>
 
             <button id="enable-audio" onclick="activateAudio()" class="bg-yellow-500 text-slate-900 px-4 py-2 rounded-lg text-xs font-black animate-pulse">
-                <i class="fa fa-volume-up mr-1"></i> AKTIFKAN SUARA
+                <i class="fa fa-volume-up mr-1"></i> AKTIFKAN SUARA & NOTIF
             </button>
         </div>
     </header>
@@ -59,42 +59,55 @@
         let audioActive = false;
         let currentFilter = 'all';
 
-        // 1. Fungsi Aktifkan Audio (Penting!)
         function activateAudio() {
             const audio = document.getElementById('notif-sound');
             audio.play().then(() => {
                 audio.pause();
                 audioActive = true;
                 document.getElementById('enable-audio').classList.replace('bg-yellow-500', 'bg-green-600');
-                document.getElementById('enable-audio').innerHTML = '<i class="fa fa-check mr-1"></i> SUARA AKTIF';
+                document.getElementById('enable-audio').innerHTML = '<i class="fa fa-check mr-1"></i> SUARA & NOTIF AKTIF';
                 document.getElementById('enable-audio').classList.remove('animate-pulse');
+                
+                // Test suara pertama kali
+                speakNow("Sistem suara aktif. Menunggu pesanan.");
             });
         }
 
-        // 2. Fungsi Load Pesanan Terakhir (saat refresh)
+        // FUNGSI SUARA BERBICARA
+        function speakNow(text) {
+            if (!audioActive) return;
+            const msg = new SpeechSynthesisUtterance();
+            msg.text = text;
+            msg.lang = 'id-ID';
+            msg.rate = 0.9;
+            window.speechSynthesis.speak(msg);
+        }
+
         async function loadInitialOrders() {
-            const { data, error } = await _supabase
+            const { data } = await _supabase
                 .from('orders')
                 .select('*, outlets(name), staff(name), rooms(name)')
-                .order('created_at', { ascending: false })
-                .limit(20);
+                .eq('status', 'pending') // Hanya ambil yang belum selesai
+                .order('created_at', { ascending: false });
 
-            if (data) {
-                document.getElementById('empty-state').remove();
+            if (data && data.length > 0) {
+                const emptyState = document.getElementById('empty-state');
+                if(emptyState) emptyState.remove();
                 data.forEach(order => appendOrder(order, false));
             }
         }
 
-        // 3. Fungsi Tambah Kartu ke UI
         function appendOrder(order, isNew) {
             const feed = document.getElementById('order-feed');
+            const emptyState = document.getElementById('empty-state');
+            if(emptyState) emptyState.remove();
             
-            // Logika Warna Berdasarkan Nama Outlet
             let borderClass = "outlet-lunox";
             if(order.outlets?.name === 'Cabana') borderClass = "outlet-cabana";
             if(order.outlets?.name === 'Delta') borderClass = "outlet-delta";
 
             const card = document.createElement('div');
+            card.id = `order-${order.id}`;
             card.className = `order-card bg-slate-800 p-5 rounded-2xl shadow-lg relative overflow-hidden ${borderClass} ${isNew ? 'animate-new' : ''}`;
             card.setAttribute('data-outlet', order.outlets?.name);
 
@@ -103,9 +116,9 @@
                     <span class="bg-slate-700 text-[10px] px-2 py-1 rounded-md font-black text-slate-300 uppercase tracking-widest">
                         ${order.outlets?.name || 'Unknown'}
                     </span>
-                    <span class="text-[10px] font-bold text-slate-500 italic">
-                        ${new Date(order.created_at).toLocaleTimeString()}
-                    </span>
+                    <button onclick="finishOrder('${order.id}')" class="text-slate-500 hover:text-green-500 transition">
+                        <i class="fa fa-check-circle text-xl"></i>
+                    </button>
                 </div>
                 <h3 class="text-xl font-black text-white mb-1 uppercase">${order.product_name}</h3>
                 <div class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-700">
@@ -122,18 +135,32 @@
 
             if (isNew) {
                 feed.prepend(card);
-                if (audioActive) document.getElementById('notif-sound').play();
+                if (audioActive) {
+                    document.getElementById('notif-sound').play();
+                    // SEBUTKAN ORDERAN
+                    speakNow(`Ada pesanan baru di ${order.outlets?.name}. ${order.product_name}`);
+                }
                 checkFilterVisibility(card);
             } else {
                 feed.appendChild(card);
             }
         }
 
-        // 4. Realtime Listener
+        // FUNGSI UPDATE STATUS KE DATABASE (SELESAI)
+        async function finishOrder(id) {
+            const { error } = await _supabase
+                .from('orders')
+                .update({ status: 'completed' })
+                .eq('id', id);
+
+            if (!error) {
+                document.getElementById(`order-${id}`).remove();
+            }
+        }
+
         _supabase
             .channel('admin-monitoring')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async (payload) => {
-                // Ambil detail nama (outlet, staff, room) karena payload insert hanya kirim ID
                 const { data } = await _supabase
                     .from('orders')
                     .select('*, outlets(name), staff(name), rooms(name)')
@@ -142,33 +169,20 @@
                 
                 if (data) appendOrder(data, true);
             })
-            .subscribe((status) => {
-                if(status === 'SUBSCRIBED') {
-                    document.getElementById('connection-status').innerText = "🟢 Realtime Aktif";
-                    document.getElementById('connection-status').classList.replace('text-slate-400', 'text-green-500');
-                }
-            });
+            .subscribe();
 
-        // 5. Fungsi Filter
         function filterByOutlet(outlet) {
             currentFilter = outlet;
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.classList.remove('bg-blue-600', 'text-white');
                 if(btn.innerText.toLowerCase() === outlet.toLowerCase()) btn.classList.add('bg-blue-600', 'text-white');
             });
-
-            document.querySelectorAll('.order-card').forEach(card => {
-                checkFilterVisibility(card);
-            });
+            document.querySelectorAll('.order-card').forEach(card => checkFilterVisibility(card));
         }
 
         function checkFilterVisibility(card) {
             const outletName = card.getAttribute('data-outlet');
-            if (currentFilter === 'all' || outletName === currentFilter) {
-                card.style.display = 'block';
-            } else {
-                card.style.display = 'none';
-            }
+            card.style.display = (currentFilter === 'all' || outletName === currentFilter) ? 'block' : 'none';
         }
 
         loadInitialOrders();
