@@ -194,50 +194,48 @@
             }
         }
 
- function initRealtimeSubscription() {
+function initRealtimeSubscription() {
     console.log("Memulai Koneksi Realtime...");
     
     _supabase.channel('update-order')
         .on('postgres_changes', 
             { event: 'INSERT', schema: 'public', table: 'orders' }, 
             async (payload) => {
-                console.log("Order Baru Masuk:", payload);
+                console.log("Data Baru:", payload.new);
                 
-                // 1. Refresh tampilan list order
+                // 1. Refresh tampilan UI
                 loadActiveOrders(); 
-                
-                // 2. Logika Suara Spesifik Nama Outlet
-                if (audioActive) {
-                    // Ambil detail nama outlet dari data baru
-                    // Kita gunakan payload.new.outlet_name (pastikan kolom ini ada di tabel orders)
-                    // Atau jika hanya ada outlet_id, kita ambil dari payload
-                    const namaOutlet = payload.new.outlet_name || "Outlet";
-                    const namaProduk = payload.new.product_name || "Produk Baru";
 
-                    // Bunyikan Bell dulu
+                if (audioActive) {
+                    let namaOutlet = "Outlet Luar";
+                    const namaProduk = payload.new.product_name || "Produk";
+
+                    // 2. Ambil Nama Outlet dari tabel 'outlets' berdasarkan ID
+                    if (payload.new.outlet_id) {
+                        const { data: outletData } = await _supabase
+                            .from('outlets')
+                            .select('name')
+                            .eq('id', payload.new.outlet_id)
+                            .single();
+                        
+                        if (outletData) namaOutlet = outletData.name;
+                    }
+
+                    // 3. Mainkan Suara
                     const snd = document.getElementById('notif-sound');
                     if(snd) {
                         snd.currentTime = 0;
                         snd.play().catch(e => console.log("Audio play error:", e));
                     }
 
-                    // Suara Manusia menyebutkan Outlet dan Produk
+                    // Jeda 1 detik agar suara bell selesai
                     setTimeout(() => {
-                        speakNow(`Pesanan baru masuk dari ${namaOutlet}. ${namaProduk}.`);
-                    }, 800); // Jeda sebentar setelah suara bell
+                        speakNow(`Pesanan baru masuk dari ${namaOutlet}. Pesanan adalah ${namaProduk}`);
+                    }, 1000);
                 }
             }
         )
-        // Tambahkan listener untuk UPDATE agar dashboard refresh saat status berubah (misal: selesai)
-        .on('postgres_changes', 
-            { event: 'UPDATE', schema: 'public', table: 'orders' }, 
-            (payload) => {
-                loadActiveOrders();
-            }
-        )
-        .subscribe((status) => {
-            console.log("Status Koneksi Realtime:", status);
-        });
+        .subscribe();
 }
         async function loadActiveOrders() {
             const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('status', 'pending').order('created_at', { ascending: false });
