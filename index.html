@@ -9,39 +9,22 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
-        /* TAMPILAN UI */
         .selected-card { border-color: #2563eb !important; background-color: #eff6ff !important; border-width: 3px; }
         .active-menu { background-color: #1e293b; border-left: 4px solid #3b82f6; color: white; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
         .hide-scroll::-webkit-scrollbar { display: none; }
 
-        /* KONFIGURASI PRINT - PERBAIKAN AGAR TIDAK BLANK */
-        #print-area { display: none; } /* Tersembunyi di layar monitor */
-
+        /* PRINT CONFIG */
+        #print-area { display: none; }
         @media print {
-            /* Sembunyikan semua elemen UI aplikasi */
             body * { visibility: hidden; }
-            
-            /* Tampilkan hanya area struk */
-            #print-area, #print-area * { 
-                visibility: visible !important; 
-                display: block !important;
-                color: black !important;
-            }
-            
-            #print-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 58mm; /* Lebar standar kertas thermal */
-                font-family: 'Courier New', Courier, monospace;
-                background-color: white;
-                padding: 5px;
-            }
-            
-            /* Hilangkan Margin Browser (Header/Footer URL) */
+            #print-area, #print-area * { visibility: visible !important; display: block !important; color: black !important; }
+            #print-area { position: absolute; left: 0; top: 0; width: 58mm; font-family: 'Courier New', monospace; padding: 5px; background: white; }
             @page { size: auto; margin: 0mm; }
         }
+
+        /* Fixed Table Scroll */
+        .history-scroll { max-height: calc(100vh - 250px); overflow-y: auto; }
     </style>
 </head>
 <body class="bg-gray-100 flex h-screen overflow-hidden text-slate-800">
@@ -62,8 +45,7 @@
             </div>
         </div>
         <div style="text-align: center; margin-top: 20px; font-size: 10px; border-top: 1px dashed #000; padding-top: 8px;">
-            *** PESANAN SEDANG DIPROSES ***<br>
-            Terima Kasih
+            *** TERIMA KASIH ***
         </div>
     </div>
 
@@ -77,14 +59,14 @@
     <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex">
         <div class="p-6 border-b border-slate-800">
             <div class="text-2xl font-black text-white italic">LUNOX <span class="text-blue-500">POS</span></div>
-            <div id="active-outlet-badge" class="mt-2 text-[10px] bg-blue-600 text-white px-2 py-1 rounded inline-block font-bold">MEMUAT...</div>
+            <div id="active-outlet-badge" class="mt-2 text-[10px] bg-blue-600 text-white px-2 py-1 rounded inline-block font-bold uppercase">Memuat...</div>
         </div>
         <nav class="mt-4 flex-1">
             <a href="#" onclick="showPage('bar')" id="menu-bar" class="flex items-center px-6 py-4 active-menu transition">
                 <i class="fa-solid fa-cash-register mr-3 text-sm"></i> Take Order
             </a>
             <a href="#" onclick="showPage('dashboard')" id="menu-dashboard" class="flex items-center px-6 py-4 hover:bg-slate-800 transition">
-                <i class="fa-solid fa-chart-line mr-3 text-sm"></i> Riwayat
+                <i class="fa-solid fa-history mr-3 text-sm"></i> Riwayat Transaksi
             </a>
         </nav>
         <button onclick="location.reload()" class="p-6 text-xs font-bold text-slate-500 hover:text-white border-t border-slate-800 text-left uppercase">
@@ -93,40 +75,35 @@
     </aside>
 
     <main class="flex-1 overflow-y-auto p-4 md:p-8">
+        
         <div id="page-bar" class="page-content">
             <div class="flex flex-col lg:flex-row gap-6">
-                
                 <div class="flex-1 space-y-6">
                     <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center">
                         <div class="relative flex-1 w-full">
                             <i class="fa fa-search absolute left-4 top-3.5 text-gray-400"></i>
-                            <input type="text" id="search-input" oninput="filterBySearch()" placeholder="Cari nama menu..." class="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-2xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm">
+                            <input type="text" id="search-input" oninput="filterBySearch()" placeholder="Cari menu..." class="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-2xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm">
                         </div>
                         <div id="category-filters" class="flex gap-2 overflow-x-auto hide-scroll w-full md:w-auto"></div>
                     </div>
-
                     <div id="product-grid" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
                 </div>
 
                 <div class="w-full lg:w-80">
                     <div class="bg-white p-6 rounded-3xl shadow-xl border border-gray-100 sticky top-4">
-                        <h3 class="font-black text-slate-800 mb-4 flex items-center">
+                        <h3 class="font-black text-slate-800 mb-4 flex items-center tracking-tighter">
                             <i class="fa fa-shopping-bag mr-2 text-blue-600"></i> DETAIL ORDER
                         </h3>
-                        
                         <div class="space-y-3 mb-6">
-                            <select id="select-room" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200"></select>
-                            <select id="select-staff" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200"></select>
-                            <input type="text" id="note" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200" placeholder="No. Meja / Nama Tamu">
+                            <select id="select-room" class="w-full p-3 bg-gray-50 rounded-xl border-none text-xs font-bold outline-none ring-1 ring-gray-200"></select>
+                            <select id="select-staff" class="w-full p-3 bg-gray-50 rounded-xl border-none text-xs font-bold outline-none ring-1 ring-gray-200"></select>
+                            <input type="text" id="note" class="w-full p-3 bg-gray-50 rounded-xl border-none text-xs font-bold outline-none ring-1 ring-gray-200" placeholder="Nama Tamu / No. Meja">
                         </div>
-
-                        <div id="selected-info" class="p-4 bg-blue-50 rounded-2xl hidden border border-blue-200 mb-6">
-                            <p class="text-[10px] text-blue-600 font-black uppercase">Menu Terpilih:</p>
-                            <p id="display-item" class="font-black text-slate-800 text-lg leading-tight"></p>
-                            <p id="display-price" class="text-blue-700 font-bold text-sm mt-1"></p>
+                        <div id="selected-info" class="p-4 bg-blue-50 rounded-2xl hidden border border-blue-200 mb-6 text-center">
+                            <p id="display-item" class="font-black text-slate-800 text-sm uppercase mb-1"></p>
+                            <p id="display-price" class="text-blue-700 font-black text-lg"></p>
                         </div>
-
-                        <button onclick="sendOrder()" id="btnSend" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest">
+                        <button onclick="sendOrder()" id="btnSend" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest text-xs">
                             KIRIM & PRINT BILL
                         </button>
                     </div>
@@ -134,10 +111,36 @@
             </div>
         </div>
 
-        <div id="page-dashboard" class="page-content hidden py-20 text-center">
-            <i class="fa-solid fa-history text-6xl text-slate-200 mb-4"></i>
-            <h2 class="text-xl font-bold text-slate-400">Riwayat Pesanan Segera Hadir</h2>
+        <div id="page-dashboard" class="page-content hidden">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+                <h2 class="text-xl font-black text-slate-800 uppercase italic">Riwayat Transaksi</h2>
+                <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                    <select id="filter-room-hist" onchange="loadHistory()" class="bg-gray-50 p-2 rounded-xl border border-gray-200 text-[10px] font-bold outline-none min-w-[120px]"></select>
+                    <select id="filter-staff-hist" onchange="loadHistory()" class="bg-gray-50 p-2 rounded-xl border border-gray-200 text-[10px] font-bold outline-none min-w-[120px]"></select>
+                    <button onclick="loadHistory()" class="bg-slate-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-blue-600 transition">
+                        <i class="fa fa-sync"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                <div class="history-scroll">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-900 text-slate-400 text-[10px] font-black uppercase sticky top-0 z-10">
+                            <tr>
+                                <th class="p-4">Waktu</th>
+                                <th class="p-4">Item</th>
+                                <th class="p-4">Room & Staff</th>
+                                <th class="p-4">Total</th>
+                                <th class="p-4 text-center">Opsi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body" class="text-xs font-bold divide-y divide-gray-50"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
+
     </main>
 
     <script>
@@ -153,7 +156,7 @@
         async function init() {
             const { data: outlets } = await _supabase.from('outlets').select('*');
             document.getElementById('outlet-list-btns').innerHTML = outlets.map(o => `
-                <button onclick="chooseOutlet('${o.id}', '${o.name}')" class="w-full p-5 bg-slate-800 hover:bg-blue-600 text-white rounded-2xl font-black flex justify-between items-center transition-all group">
+                <button onclick="chooseOutlet('${o.id}', '${o.name}')" class="w-full p-5 bg-slate-800 hover:bg-blue-600 text-white rounded-2xl font-black flex justify-between items-center transition-all group uppercase text-sm italic">
                     ${o.name} <i class="fa fa-chevron-right text-slate-600 group-hover:text-white"></i>
                 </button>
             `).join('');
@@ -167,16 +170,25 @@
             const [r, s, p] = await Promise.all([
                 _supabase.from('rooms').select('*'),
                 _supabase.from('staff').select('*'),
-                _supabase.from('products').select('*')
+                _supabase.from('products').select('*').eq('outlet_name', name)
             ]);
 
             allProducts = p.data || [];
-            document.getElementById('select-room').innerHTML = '<option value="">-- Pilih Room --</option>' + r.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
-            document.getElementById('select-staff').innerHTML = '<option value="">-- Pilih Staff --</option>' + s.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+            
+            // Populate Main Dropdowns
+            const roomOptions = '<option value="">-- PILIH ROOM --</option>' + r.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+            const staffOptions = '<option value="">-- PILIH STAFF --</option>' + s.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+            
+            document.getElementById('select-room').innerHTML = roomOptions;
+            document.getElementById('select-staff').innerHTML = staffOptions;
+            
+            // Populate History Filters
+            document.getElementById('filter-room-hist').innerHTML = '<option value="">SEMUA ROOM</option>' + r.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+            document.getElementById('filter-staff-hist').innerHTML = '<option value="">SEMUA STAFF</option>' + s.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
 
             const cats = ['All', ...new Set(allProducts.map(i => i.category))];
             document.getElementById('category-filters').innerHTML = cats.map(c => `
-                <button onclick="filterByCategory('${c}', this)" class="category-btn px-5 py-2 rounded-xl border font-bold text-xs transition-all ${c==='All'?'bg-blue-600 text-white':'bg-white text-gray-600'}">
+                <button onclick="filterByCategory('${c}', this)" class="category-btn whitespace-nowrap px-4 py-2 rounded-xl border font-black text-[10px] uppercase transition-all ${c==='All'?'bg-blue-600 text-white border-blue-600':'bg-white text-gray-500'}">
                     ${c}
                 </button>
             `).join('');
@@ -186,13 +198,13 @@
 
         function renderProducts(items) {
             const grid = document.getElementById('product-grid');
-            grid.innerHTML = items.length === 0 ? '<p class="col-span-full text-center py-10 text-gray-400 font-bold">Menu tidak ditemukan...</p>' : 
+            grid.innerHTML = items.length === 0 ? '<p class="col-span-full text-center py-10 text-gray-400 font-bold uppercase text-xs">Menu tidak tersedia...</p>' : 
             items.map(i => `
-                <div onclick="selectProduct('${i.id}', '${i.name}', ${i.price}, this)" class="bg-white p-5 rounded-3xl border-2 border-transparent shadow-sm hover:border-blue-400 cursor-pointer transition-all active:scale-95 group">
-                    <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-3 group-hover:bg-blue-600 group-hover:text-white transition">
-                        <i class="fa-solid fa-bowl-food"></i>
+                <div onclick="selectProduct('${i.id}', '${i.name}', ${i.price}, this)" class="bg-white p-4 rounded-3xl border-2 border-transparent shadow-sm hover:border-blue-400 cursor-pointer transition-all active:scale-95 group">
+                    <div class="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mb-3 group-hover:bg-blue-600 group-hover:text-white transition">
+                        <i class="fa-solid fa-mug-hot text-xs"></i>
                     </div>
-                    <p class="font-black text-slate-800 text-sm leading-tight h-10 overflow-hidden uppercase">${i.name}</p>
+                    <p class="font-black text-slate-800 text-[11px] leading-tight h-8 overflow-hidden uppercase">${i.name}</p>
                     <p class="text-blue-600 font-black text-xs mt-2 italic">Rp ${i.price.toLocaleString()}</p>
                 </div>
             `).join('');
@@ -201,8 +213,7 @@
         function filterBySearch() {
             const keyword = document.getElementById('search-input').value.toLowerCase();
             const filtered = allProducts.filter(p => 
-                p.name.toLowerCase().includes(keyword) && 
-                (currentCategory === 'All' || p.category === currentCategory)
+                p.name.toLowerCase().includes(keyword) && (currentCategory === 'All' || p.category === currentCategory)
             );
             renderProducts(filtered);
         }
@@ -210,11 +221,12 @@
         function filterByCategory(cat, el) {
             currentCategory = cat;
             document.querySelectorAll('.category-btn').forEach(b => {
-                b.classList.remove('bg-blue-600', 'text-white');
-                b.classList.add('bg-white', 'text-gray-600');
+                b.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+                b.classList.add('bg-white', 'text-gray-500');
             });
             el.classList.replace('bg-white', 'bg-blue-600');
-            el.classList.replace('text-gray-600', 'text-white');
+            el.classList.replace('text-gray-500', 'text-white');
+            el.classList.add('border-blue-600');
             filterBySearch();
         }
 
@@ -233,7 +245,7 @@
             const note = document.getElementById('note').value;
 
             if(!roomEl.value || !staffEl.value || !currentOrderProduct) {
-                return alert("⚠️ Pilih Menu, Room, dan Staff dulu!");
+                return alert("⚠️ Pilih Menu, Room, dan Staff!");
             }
 
             const btn = document.getElementById('btnSend');
@@ -250,7 +262,7 @@
             }]);
 
             if(!error) {
-                // ISI DATA KE STRUK SEBELUM PRINT
+                // Print Area Setup
                 document.getElementById('p-outlet-title').innerText = selectedOutlet.name.toUpperCase();
                 document.getElementById('p-date').innerText = new Date().toLocaleString('id-ID');
                 document.getElementById('p-room').innerText = roomEl.options[roomEl.selectedIndex].text;
@@ -259,24 +271,80 @@
                 document.getElementById('p-product').innerText = currentOrderProduct.name;
                 document.getElementById('p-price').innerText = currentOrderProduct.price.toLocaleString('id-ID');
 
-                // JEDA AGAR DATA DI-RENDER OLEH BROWSER
                 setTimeout(() => {
                     window.print();
-                    alert("✅ Order Berhasil Terkirim & Cetak!");
-                    
-                    // Reset Field
-                    currentOrderProduct = null;
-                    document.getElementById('selected-info').classList.add('hidden');
-                    document.querySelectorAll('.selected-card').forEach(c => c.classList.remove('selected-card'));
-                    document.getElementById('note').value = "";
-                    document.getElementById('search-input').value = "";
-                    filterBySearch();
+                    alert("✅ Berhasil!");
+                    resetForm();
                     btn.disabled = false; btn.innerText = "KIRIM & PRINT BILL";
                 }, 300);
             } else {
-                alert("Gagal: " + error.message);
+                alert("Error: " + error.message);
                 btn.disabled = false; btn.innerText = "KIRIM & PRINT BILL";
             }
+        }
+
+        function resetForm() {
+            currentOrderProduct = null;
+            document.getElementById('selected-info').classList.add('hidden');
+            document.querySelectorAll('.selected-card').forEach(c => c.classList.remove('selected-card'));
+            document.getElementById('note').value = "";
+            document.getElementById('search-input').value = "";
+            filterBySearch();
+        }
+
+        async function loadHistory() {
+            if(!selectedOutlet) return;
+            const rFilter = document.getElementById('filter-room-hist').value;
+            const sFilter = document.getElementById('filter-staff-hist').value;
+            const tbody = document.getElementById('history-body');
+            
+            tbody.innerHTML = '<tr><td colspan="5" class="p-10 text-center opacity-50 uppercase font-black italic">Memuat data...</td></tr>';
+
+            let query = _supabase.from('orders').select('*, rooms(name), staff(name)').eq('outlet_id', selectedOutlet.id).order('created_at', { ascending: false }).limit(50);
+            if(rFilter) query = query.eq('room_id', rFilter);
+            if(sFilter) query = query.eq('staff_id', sFilter);
+
+            const { data, error } = await query;
+            if(error || !data) return tbody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-red-500">Gagal Memuat.</td></tr>';
+
+            tbody.innerHTML = data.map(o => {
+                const date = new Date(o.created_at).toLocaleString('id-ID', { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short' });
+                return `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-4 text-[10px] text-slate-400 font-normal">${date}</td>
+                    <td class="p-4">
+                        <div class="uppercase text-slate-800">${o.product_name}</div>
+                        <div class="text-[9px] text-slate-400 font-normal">${o.table_number || '-'}</div>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex flex-col gap-1">
+                            <span class="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] w-fit uppercase">${o.rooms?.name || '??'}</span>
+                            <span class="bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-[9px] w-fit uppercase">${o.staff?.name || '??'}</span>
+                        </div>
+                    </td>
+                    <td class="p-4 text-blue-600 font-black italic text-xs">Rp ${o.price.toLocaleString()}</td>
+                    <td class="p-4 text-center">
+                        <button onclick="reprintOrder('${o.id}')" class="bg-white border border-slate-200 w-8 h-8 rounded-lg hover:bg-blue-600 hover:text-white transition">
+                            <i class="fa fa-print text-[10px]"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function reprintOrder(id) {
+            const { data: o } = await _supabase.from('orders').select('*, rooms(name), staff(name)').eq('id', id).single();
+            if(!o) return;
+
+            document.getElementById('p-outlet-title').innerText = selectedOutlet.name.toUpperCase();
+            document.getElementById('p-date').innerText = new Date(o.created_at).toLocaleString('id-ID');
+            document.getElementById('p-room').innerText = o.rooms?.name || '-';
+            document.getElementById('p-staff').innerText = o.staff?.name || '-';
+            document.getElementById('p-note').innerText = o.table_number || '-';
+            document.getElementById('p-product').innerText = o.product_name;
+            document.getElementById('p-price').innerText = o.price.toLocaleString('id-ID');
+
+            setTimeout(() => window.print(), 300);
         }
 
         function showPage(page) {
@@ -284,6 +352,7 @@
             document.querySelectorAll('nav a').forEach(a => a.classList.remove('active-menu'));
             document.getElementById(`page-${page}`).classList.remove('hidden');
             document.getElementById(`menu-${page}`).classList.add('active-menu');
+            if(page === 'dashboard') loadHistory();
         }
 
         init();
