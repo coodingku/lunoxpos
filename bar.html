@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar - Input Order</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 p-5">
+    <div class="max-w-md mx-auto bg-white p-6 rounded-xl shadow-md">
+        <h2 class="text-2xl font-bold mb-4 text-blue-600">Input Pesanan Baru</h2>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium">Nama Produk</label>
+                <input type="text" id="product" class="w-full p-2 border rounded-lg" placeholder="Contoh: Kopi Susu">
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Harga (Rp)</label>
+                <input type="number" id="price" class="w-full p-2 border rounded-lg" placeholder="15000">
+            </div>
+            <div>
+                <label class="block text-sm font-medium">No. Meja</label>
+                <input type="text" id="table" class="w-full p-2 border rounded-lg" placeholder="Meja 01">
+            </div>
+            <button onclick="kirimOrder()" id="btnKirim" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">
+                Kirim ke Kasir
+            </button>
+        </div>
+        <p id="msg" class="mt-4 text-center text-green-600 hidden font-semibold text-sm">Berhasil Terkirim!</p>
+    </div>
+
+    <script>
+        // GANTI DENGAN DATA SUPABASE KAMU
+        const SB_URL = "URL_SUPABASE_KAMU";
+        const SB_KEY = "ANON_KEY_KAMU";
+        const supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        async function kirimOrder() {
+            const product = document.getElementById('product').value;
+            const price = document.getElementById('price').value;
+            const table = document.getElementById('table').value;
+            const btn = document.getElementById('btnKirim');
+
+            if(!product || !price) return alert("Isi nama produk & harga!");
+
+            btn.disabled = true;
+            btn.innerText = "Mengirim...";
+
+            const { error } = await supabase
+                .from('orders')
+                .insert([{ product_name: product, price: price, table_number: table }]);
+
+            if (error) {
+                alert("Gagal: " + error.message);
+            } else {
+                document.getElementById('msg').classList.remove('hidden');
+                document.getElementById('product').value = "";
+                document.getElementById('price').value = "";
+                setTimeout(() => document.getElementById('msg').classList.add('hidden'), 3000);
+            }
+            btn.disabled = false;
+            btn.innerText = "Kirim ke Kasir";
+        }
+    </script>
+</body>
+</html>
