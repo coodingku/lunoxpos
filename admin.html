@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - LUNOX POS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .outlet-cabana { border-left: 6px solid #f97316; } /* Orange */
+        .outlet-delta { border-left: 6px solid #3b82f6; }  /* Blue */
+        .outlet-lunox { border-left: 6px solid #a855f7; }  /* Purple */
+        .animate-new { animation: slideIn 0.5s ease-out; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+    <header class="bg-slate-800 p-6 shadow-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-black tracking-tighter text-white italic">ADMIN CENTRAL <span class="text-blue-500">POS</span></h1>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest" id="connection-status">🟡 Menghubungkan...</p>
+            </div>
+
+            <div class="flex bg-slate-700 p-1 rounded-xl gap-1">
+                <button onclick="filterByOutlet('all')" class="filter-btn px-4 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white">ALL</button>
+                <button onclick="filterByOutlet('Cabana')" class="filter-btn px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-600">CABANA</button>
+                <button onclick="filterByOutlet('Delta')" class="filter-btn px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-600">DELTA</button>
+                <button onclick="filterByOutlet('Lunox Karaoke')" class="filter-btn px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-600">LUNOX</button>
+            </div>
+
+            <button id="enable-audio" onclick="activateAudio()" class="bg-yellow-500 text-slate-900 px-4 py-2 rounded-lg text-xs font-black animate-pulse">
+                <i class="fa fa-volume-up mr-1"></i> AKTIFKAN SUARA
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6">
+        <div id="order-feed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div id="empty-state" class="col-span-full text-center py-20 text-slate-600">
+                <i class="fa fa-clock text-5xl mb-4"></i>
+                <p class="text-xl font-bold">Menunggu Pesanan Masuk...</p>
+            </div>
+        </div>
+    </main>
+
+    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+    <script>
+        const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        let audioActive = false;
+        let currentFilter = 'all';
+
+        // 1. Fungsi Aktifkan Audio (Penting!)
+        function activateAudio() {
+            const audio = document.getElementById('notif-sound');
+            audio.play().then(() => {
+                audio.pause();
+                audioActive = true;
+                document.getElementById('enable-audio').classList.replace('bg-yellow-500', 'bg-green-600');
+                document.getElementById('enable-audio').innerHTML = '<i class="fa fa-check mr-1"></i> SUARA AKTIF';
+                document.getElementById('enable-audio').classList.remove('animate-pulse');
+            });
+        }
+
+        // 2. Fungsi Load Pesanan Terakhir (saat refresh)
+        async function loadInitialOrders() {
+            const { data, error } = await _supabase
+                .from('orders')
+                .select('*, outlets(name), staff(name), rooms(name)')
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            if (data) {
+                document.getElementById('empty-state').remove();
+                data.forEach(order => appendOrder(order, false));
+            }
+        }
+
+        // 3. Fungsi Tambah Kartu ke UI
+        function appendOrder(order, isNew) {
+            const feed = document.getElementById('order-feed');
+            
+            // Logika Warna Berdasarkan Nama Outlet
+            let borderClass = "outlet-lunox";
+            if(order.outlets?.name === 'Cabana') borderClass = "outlet-cabana";
+            if(order.outlets?.name === 'Delta') borderClass = "outlet-delta";
+
+            const card = document.createElement('div');
+            card.className = `order-card bg-slate-800 p-5 rounded-2xl shadow-lg relative overflow-hidden ${borderClass} ${isNew ? 'animate-new' : ''}`;
+            card.setAttribute('data-outlet', order.outlets?.name);
+
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <span class="bg-slate-700 text-[10px] px-2 py-1 rounded-md font-black text-slate-300 uppercase tracking-widest">
+                        ${order.outlets?.name || 'Unknown'}
+                    </span>
+                    <span class="text-[10px] font-bold text-slate-500 italic">
+                        ${new Date(order.created_at).toLocaleTimeString()}
+                    </span>
+                </div>
+                <h3 class="text-xl font-black text-white mb-1 uppercase">${order.product_name}</h3>
+                <div class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-700">
+                    <div>
+                        <p class="text-[9px] text-slate-500 font-bold uppercase">Staff</p>
+                        <p class="text-xs font-bold text-blue-400">${order.staff?.name || '-'}</p>
+                    </div>
+                    <div>
+                        <p class="text-[9px] text-slate-500 font-bold uppercase">Room / Note</p>
+                        <p class="text-xs font-bold text-white">${order.rooms?.name || '-'} / ${order.table_number || ''}</p>
+                    </div>
+                </div>
+            `;
+
+            if (isNew) {
+                feed.prepend(card);
+                if (audioActive) document.getElementById('notif-sound').play();
+                checkFilterVisibility(card);
+            } else {
+                feed.appendChild(card);
+            }
+        }
+
+        // 4. Realtime Listener
+        _supabase
+            .channel('admin-monitoring')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async (payload) => {
+                // Ambil detail nama (outlet, staff, room) karena payload insert hanya kirim ID
+                const { data } = await _supabase
+                    .from('orders')
+                    .select('*, outlets(name), staff(name), rooms(name)')
+                    .eq('id', payload.new.id)
+                    .single();
+                
+                if (data) appendOrder(data, true);
+            })
+            .subscribe((status) => {
+                if(status === 'SUBSCRIBED') {
+                    document.getElementById('connection-status').innerText = "🟢 Realtime Aktif";
+                    document.getElementById('connection-status').classList.replace('text-slate-400', 'text-green-500');
+                }
+            });
+
+        // 5. Fungsi Filter
+        function filterByOutlet(outlet) {
+            currentFilter = outlet;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white');
+                if(btn.innerText.toLowerCase() === outlet.toLowerCase()) btn.classList.add('bg-blue-600', 'text-white');
+            });
+
+            document.querySelectorAll('.order-card').forEach(card => {
+                checkFilterVisibility(card);
+            });
+        }
+
+        function checkFilterVisibility(card) {
+            const outletName = card.getAttribute('data-outlet');
+            if (currentFilter === 'all' || outletName === currentFilter) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        }
+
+        loadInitialOrders();
+    </script>
+</body>
+</html>
