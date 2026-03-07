@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar - Take Order</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .selected-card { border-color: #2563eb !important; background-color: #eff6ff !important; }
+    </style>
+</head>
+<body class="bg-gray-50 p-4 pb-32">
+    <div class="max-w-md mx-auto space-y-6">
+        <h1 class="text-2xl font-black text-blue-600">LUNOX POS</h1>
+
+        <section>
+            <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">📍 Area / Room</label>
+            <div id="room-list" class="grid grid-cols-3 gap-2"></div>
+        </section>
+
+        <section>
+            <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">👤 Staff</label>
+            <div id="staff-list" class="grid grid-cols-2 gap-2"></div>
+        </section>
+
+        <section>
+            <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">🛒 Pilih Menu</label>
+            <div id="product-list" class="grid grid-cols-1 gap-2">
+                </div>
+        </section>
+
+        <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+            <input type="text" id="table_note" class="w-full p-2 border-b outline-none text-sm" placeholder="Nomor Meja / Catatan (Optional)">
+        </section>
+
+        <button onclick="kirimOrder()" id="btnKirim" class="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-xl active:scale-95 transition-all">
+            KIRIM PESANAN
+        </button>
+    </div>
+
+    <script>
+        const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        let selectedRoom = null;
+        let selectedStaff = null;
+        let selectedProduct = null;
+
+        async function initApp() {
+            // Ambil semua data secara paralel dari database
+            const [rResp, sResp, pResp] = await Promise.all([
+                _supabase.from('rooms').select('*'),
+                _supabase.from('staff').select('*'),
+                _supabase.from('products').select('*')
+            ]);
+
+            // Render Rooms
+            const rDiv = document.getElementById('room-list');
+            rResp.data.forEach(r => {
+                rDiv.innerHTML += `<div onclick="selectItem('room', '${r.id}', this)" class="bg-white border p-3 rounded-lg text-center cursor-pointer text-xs font-bold">${r.name}</div>`;
+            });
+
+            // Render Staff
+            const sDiv = document.getElementById('staff-list');
+            sResp.data.forEach(s => {
+                sDiv.innerHTML += `<div onclick="selectItem('staff', '${s.id}', this)" class="bg-white border p-3 rounded-lg text-center cursor-pointer text-xs font-bold">${s.name}</div>`;
+            });
+
+            // Render Products (Bentuk Kartu)
+            const pDiv = document.getElementById('product-list');
+            pResp.data.forEach(p => {
+                pDiv.innerHTML += `
+                    <div onclick="selectProduct('${p.id}', '${p.name}', ${p.price}, this)" class="bg-white border p-4 rounded-xl flex justify-between items-center cursor-pointer hover:shadow-md transition-all">
+                        <div>
+                            <p class="font-bold text-gray-800">${p.name}</p>
+                            <p class="text-blue-600 text-xs font-mono">Rp ${p.price.toLocaleString()}</p>
+                        </div>
+                        <div class="text-gray-300 text-xl">＋</div>
+                    </div>
+                `;
+            });
+        }
+
+        function selectItem(type, id, el) {
+            document.querySelectorAll(`#${type}-list div`).forEach(d => d.classList.remove('selected-card'));
+            el.classList.add('selected-card');
+            if(type === 'room') selectedRoom = id;
+            if(type === 'staff') selectedStaff = id;
+        }
+
+        function selectProduct(id, name, price, el) {
+            document.querySelectorAll('#product-list div').forEach(d => d.classList.remove('selected-card'));
+            el.classList.add('selected-card');
+            selectedProduct = { id, name, price };
+        }
+
+        async function kirimOrder() {
+            if(!selectedRoom || !selectedStaff || !selectedProduct) return alert("Pilih Room, Staff, dan Menu!");
+            
+            const btn = document.getElementById('btnKirim');
+            btn.disabled = true;
+            btn.innerText = "MENGIRIM...";
+
+            const { error } = await _supabase.from('orders').insert([{
+                product_name: selectedProduct.name,
+                price: selectedProduct.price,
+                table_number: document.getElementById('table_note').value,
+                room_id: selectedRoom,
+                staff_id: selectedStaff,
+                status: 'pending'
+            }]);
+
+            if (error) {
+                alert("Gagal: " + error.message);
+            } else {
+                alert("✅ Pesanan Terkirim!");
+            }
+            btn.disabled = false;
+            btn.innerText = "KIRIM PESANAN";
+        }
+
+        initApp();
+    </script>
+</body>
+</html>
