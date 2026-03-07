@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUNOX ADMIN CENTRAL</title>
+    <title>LUNOX ADMIN CENTRAL - FIXED</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -15,7 +15,7 @@
         .outlet-cabana { border-left: 6px solid #f97316; }
         .outlet-delta { border-left: 6px solid #3b82f6; }
         .outlet-lunox { border-left: 6px solid #a855f7; }
-        .active-tab { background-color: #3b82f6; color: white; border-radius: 12px; }
+        .active-tab { background-color: #3b82f6 !important; color: white !important; border-radius: 12px; }
         .animate-new { animation: slideIn 0.5s ease-out; border: 2px solid #fbbf24; }
         @keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -26,19 +26,13 @@
         <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-center gap-6">
             <div>
                 <h1 class="text-2xl font-black tracking-tighter italic">LUNOX <span class="text-blue-500 underline">ADMIN</span></h1>
-                <p id="connection-status" class="text-[10px] font-bold uppercase tracking-widest text-slate-500">🟡 Menghubungkan...</p>
+                <p id="connection-status" class="text-[10px] font-bold uppercase tracking-widest text-slate-500">🟢 Menghubungkan...</p>
             </div>
 
             <nav class="flex bg-slate-900 p-1 rounded-2xl border border-slate-700">
-                <button onclick="showTab('monitor')" id="tab-monitor" class="px-6 py-2 text-xs font-black active-tab transition-all">
-                    <i class="fa fa-desktop mr-2"></i> MONITORING
-                </button>
-                <button onclick="showTab('inventory')" id="tab-inventory" class="px-6 py-2 text-xs font-black hover:text-white transition-all">
-                    <i class="fa fa-plus-circle mr-2"></i> PRODUK
-                </button>
-                <button onclick="showTab('report')" id="tab-report" class="px-6 py-2 text-xs font-black hover:text-white transition-all">
-                    <i class="fa fa-file-invoice mr-2"></i> LAPORAN
-                </button>
+                <button onclick="showTab('monitor')" id="tab-monitor" class="px-6 py-2 text-xs font-black active-tab transition-all">MONITORING</button>
+                <button onclick="showTab('inventory')" id="tab-inventory" class="px-6 py-2 text-xs font-black hover:text-white transition-all">PRODUK</button>
+                <button onclick="showTab('report')" id="tab-report" class="px-6 py-2 text-xs font-black hover:text-white transition-all">LAPORAN</button>
             </nav>
 
             <button id="enable-audio" onclick="activateAudio()" class="bg-yellow-500 text-slate-900 px-5 py-2 rounded-xl text-xs font-black animate-pulse shadow-lg">
@@ -48,63 +42,41 @@
     </header>
 
     <main class="max-w-7xl mx-auto p-6">
-
         <div id="section-monitor" class="tab-content">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold italic text-blue-400"><i class="fa fa-bolt mr-2"></i> Live Order Feed</h2>
-                <div class="flex gap-2">
-                    <button onclick="filterByOutlet('all')" class="filter-btn bg-slate-700 px-3 py-1 rounded-lg text-[10px] font-bold hover:bg-blue-600 transition">ALL</button>
-                    <button onclick="filterByOutlet('Cabana')" class="filter-btn bg-slate-700 px-3 py-1 rounded-lg text-[10px] font-bold hover:bg-orange-600 transition">CABANA</button>
-                    <button onclick="filterByOutlet('Delta')" class="filter-btn bg-slate-700 px-3 py-1 rounded-lg text-[10px] font-bold hover:bg-blue-600 transition">DELTA</button>
-                </div>
-            </div>
-            <div id="order-feed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                </div>
+            <div id="order-feed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </div>
 
         <div id="section-inventory" class="tab-content hidden">
             <div class="max-w-xl mx-auto bg-slate-800 p-8 rounded-3xl border border-slate-700 shadow-xl">
-                <h2 class="text-2xl font-black mb-6 text-white uppercase tracking-tighter">Tambah Menu Baru</h2>
-                <div class="space-y-4">
-                    <input type="text" id="p-name" placeholder="Nama Barang" class="w-full p-4 bg-slate-900 border border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-bold">
-                    <select id="p-cat" class="w-full p-4 bg-slate-900 border border-slate-700 rounded-xl font-bold">
+                <h2 class="text-xl font-black mb-6 uppercase tracking-widest">Tambah Menu</h2>
+                <div class="space-y-4 text-slate-900">
+                    <input type="text" id="p-name" placeholder="Nama Barang" class="w-full p-4 bg-white rounded-xl font-bold outline-none">
+                    <select id="p-cat" class="w-full p-4 bg-white rounded-xl font-bold outline-none">
                         <option value="Makanan">Makanan</option>
                         <option value="Minuman">Minuman</option>
-                        <option value="Lainnya">Lainnya</option>
+                        <option value="Snack">Snack</option>
                     </select>
-                    <input type="number" id="p-price" placeholder="Harga Satuan (Rp)" class="w-full p-4 bg-slate-900 border border-slate-700 rounded-xl outline-none font-bold">
-                    <button onclick="saveProduct()" class="w-full bg-blue-600 py-4 rounded-xl font-black hover:bg-blue-700 transition shadow-lg uppercase">Simpan ke Database</button>
+                    <input type="number" id="p-price" placeholder="Harga Satuan" class="w-full p-4 bg-white rounded-xl font-bold outline-none">
+                    <button onclick="saveProduct()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-black hover:bg-blue-700 uppercase">Simpan</button>
                 </div>
             </div>
         </div>
 
         <div id="section-report" class="tab-content hidden">
-            <div class="bg-slate-800 rounded-3xl border border-slate-700 p-6">
-                <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                    <h2 class="text-xl font-black italic">DATABASE LAPORAN</h2>
+            <div class="bg-slate-800 rounded-3xl p-6 border border-slate-700">
+                <div class="flex justify-between mb-6">
+                    <h2 class="text-xl font-black italic uppercase">Database Laporan</h2>
                     <div class="flex gap-2">
-                        <button onclick="exportToExcel()" class="bg-green-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-green-700"><i class="fa fa-file-excel mr-2"></i> EXCEL</button>
-                        <button onclick="exportToPDF()" class="bg-red-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-red-700"><i class="fa fa-file-pdf mr-2"></i> PDF</button>
+                        <button onclick="exportToExcel()" class="bg-green-600 px-4 py-2 rounded-lg text-xs font-bold">EXCEL</button>
+                        <button onclick="exportToPDF()" class="bg-red-600 px-4 py-2 rounded-lg text-xs font-bold">PDF</button>
                     </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left" id="main-report-table">
-                        <thead class="text-[10px] text-slate-500 uppercase font-bold border-b border-slate-700">
-                            <tr>
-                                <th class="p-4">Tgl / Jam</th>
-                                <th class="p-4">Outlet</th>
-                                <th class="p-4">Produk</th>
-                                <th class="p-4">Staff</th>
-                                <th class="p-4">Harga</th>
-                            </tr>
+                        <thead class="text-slate-500 text-[10px] uppercase border-b border-slate-700">
+                            <tr><th class="p-4">Waktu</th><th class="p-4">Outlet</th><th class="p-4">Produk</th><th class="p-4">Harga</th></tr>
                         </thead>
                         <tbody id="report-body" class="text-sm"></tbody>
-                        <tfoot class="bg-slate-900 border-t border-slate-700">
-                            <tr>
-                                <td colspan="4" class="p-4 font-black text-right text-blue-400 uppercase italic">Grand Total Omzet :</td>
-                                <td id="grand-total" class="p-4 font-black text-white text-lg italic">Rp 0</td>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -114,110 +86,81 @@
     <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
     <script>
+        // KUNCI ASLI TANPA TYPO
         const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
-        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNceGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
         let audioActive = false;
-        let currentFilter = 'all';
 
-        // 1. FUNGSI SUARA & NOTIFIKASI
         function activateAudio() {
             const audio = document.getElementById('notif-sound');
-            audio.play().then(() => { audio.pause(); audioActive = true;
-                const btn = document.getElementById('enable-audio');
-                btn.className = "bg-green-600 text-white px-5 py-2 rounded-xl text-xs font-black shadow-lg";
-                btn.innerHTML = '<i class="fa fa-check-circle mr-2"></i> SISTEM SUARA AKTIF';
-                speak("Sistem monitoring aktif. Menunggu pesanan.");
+            audio.play().then(() => { audio.pause(); audioActive = true; 
+            document.getElementById('enable-audio').classList.replace('bg-yellow-500', 'bg-green-600');
+            document.getElementById('enable-audio').innerHTML = 'SUARA AKTIF';
             });
         }
 
-        function speak(text) {
-            if (!audioActive) return;
-            const msg = new SpeechSynthesisUtterance(text);
-            msg.lang = 'id-ID'; msg.rate = 0.9;
-            window.speechSynthesis.speak(msg);
-        }
-
-        // 2. FUNGSI MONITORING REALTIME
         async function loadActiveOrders() {
-            const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('status', 'pending').order('created_at', { ascending: false });
+            const { data, error } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('status', 'pending').order('created_at', { ascending: false });
+            if (error) console.error("Koneksi gagal:", error.message);
             if (data) data.forEach(order => appendToFeed(order, false));
         }
 
         function appendToFeed(order, isNew) {
             const feed = document.getElementById('order-feed');
             let border = (order.outlets?.name === 'Cabana') ? "outlet-cabana" : (order.outlets?.name === 'Delta') ? "outlet-delta" : "outlet-lunox";
-            
             const card = document.createElement('div');
             card.id = `order-${order.id}`;
-            card.className = `order-card bg-slate-800 p-5 rounded-3xl shadow-xl relative ${border} ${isNew ? 'animate-new' : ''}`;
+            card.className = `bg-slate-800 p-5 rounded-3xl shadow-xl border-b-4 border-slate-700 ${border} ${isNew ? 'animate-new' : ''}`;
             card.innerHTML = `
-                <div class="flex justify-between items-start mb-3">
-                    <span class="text-[9px] font-black bg-slate-900 px-2 py-1 rounded text-blue-400 uppercase">${order.outlets?.name || 'OUTLET'}</span>
-                    <button onclick="completeOrder('${order.id}')" class="text-slate-600 hover:text-green-500 transition"><i class="fa fa-check-circle text-xl"></i></button>
-                </div>
-                <h3 class="text-lg font-black text-white uppercase">${order.product_name}</h3>
-                <div class="mt-4 pt-4 border-t border-slate-700 flex justify-between items-center text-[11px] font-bold">
-                    <span class="text-blue-500">${order.staff?.name || 'Staff'}</span>
-                    <span class="text-slate-400 uppercase">${order.rooms?.name || '-'} / ${order.table_number || '-'}</span>
-                </div>
+                <div class="flex justify-between mb-2"><span class="text-[10px] font-black text-blue-400 uppercase">${order.outlets?.name}</span>
+                <button onclick="completeOrder('${order.id}')" class="text-slate-500 hover:text-green-500"><i class="fa fa-check-circle"></i></button></div>
+                <h3 class="font-black text-white uppercase">${order.product_name}</h3>
+                <div class="mt-4 text-[10px] text-slate-500 font-bold uppercase">${order.rooms?.name || '-'} | ${order.staff?.name || '-'}</div>
             `;
-            if (isNew) { feed.prepend(card); if (audioActive) { document.getElementById('notif-sound').play(); speak(`Pesanan baru di ${order.outlets?.name}. ${order.product_name}`); }}
-            else { feed.appendChild(card); }
+            isNew ? feed.prepend(card) : feed.appendChild(card);
+            if(isNew && audioActive) { document.getElementById('notif-sound').play(); }
         }
 
         async function completeOrder(id) {
-            const { error } = await _supabase.from('orders').update({ status: 'completed' }).eq('id', id);
-            if (!error) document.getElementById(`order-${id}`).remove();
+            await _supabase.from('orders').update({ status: 'completed' }).eq('id', id);
+            document.getElementById(`order-${id}`).remove();
         }
 
-        // 3. FUNGSI INVENTORY
         async function saveProduct() {
             const name = document.getElementById('p-name').value;
             const cat = document.getElementById('p-cat').value;
             const price = document.getElementById('p-price').value;
-            if(!name || !price) return alert("Lengkapi data!");
             const { error } = await _supabase.from('products').insert([{ name, category: cat, price: parseInt(price) }]);
-            if(!error) { alert("Produk Berhasil Masuk!"); location.reload(); }
+            if(!error) { alert("Berhasil!"); location.reload(); }
         }
 
-        // 4. FUNGSI LAPORAN
         async function loadReports() {
-            const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name)').order('created_at', { ascending: false });
+            const { data } = await _supabase.from('orders').select('*, outlets(name)').order('created_at', { ascending: false });
             if (data) {
-                let total = 0;
-                document.getElementById('report-body').innerHTML = data.map(o => {
-                    total += o.price;
-                    return `<tr class="border-b border-slate-700 hover:bg-slate-700 transition">
-                        <td class="p-4 text-slate-500 text-[11px] font-bold">${new Date(o.created_at).toLocaleString()}</td>
-                        <td class="p-4 font-black uppercase italic text-orange-400">${o.outlets?.name || '-'}</td>
-                        <td class="p-4 font-black uppercase text-white">${o.product_name}</td>
-                        <td class="p-4 font-bold text-blue-400">${o.staff?.name || '-'}</td>
+                document.getElementById('report-body').innerHTML = data.map(o => `
+                    <tr class="border-b border-slate-700">
+                        <td class="p-4 text-[11px] font-bold text-slate-500">${new Date(o.created_at).toLocaleString()}</td>
+                        <td class="p-4 font-black text-orange-400 uppercase">${o.outlets?.name}</td>
+                        <td class="p-4 font-black uppercase">${o.product_name}</td>
                         <td class="p-4 font-black">Rp ${o.price.toLocaleString()}</td>
-                    </tr>`;
-                }).join('');
-                document.getElementById('grand-total').innerText = "Rp " + total.toLocaleString();
+                    </tr>`).join('');
             }
         }
 
-        // 5. NAVIGASI TABS & REALTIME
         function showTab(t) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-tab'));
             document.getElementById(`section-${t}`).classList.remove('hidden');
             document.getElementById(`tab-${t}`).classList.add('active-tab');
-            if (t === 'report') loadReports();
+            if(t === 'report') loadReports();
         }
 
-        _supabase.channel('admin-realtime').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async (p) => {
+        _supabase.channel('custom-all-channel').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async (p) => {
             const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('id', p.new.id).single();
             if (data) appendToFeed(data, true);
         }).subscribe();
-
-        // EXPORT LOGIC
-        function exportToExcel() { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById('main-report-table')), 'Laporan_Lunox_POS.xlsx'); }
-        function exportToPDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text("Laporan Penjualan Lunox POS", 14, 15); doc.autoTable({ html: '#main-report-table', startY: 20 }); doc.save("Laporan_Lunox.pdf"); }
 
         loadActiveOrders();
     </script>
