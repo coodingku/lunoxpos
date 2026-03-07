@@ -194,44 +194,23 @@
             }
         }
 
-      function initRealtimeSubscription() {
+    function initRealtimeSubscription() {
     console.log("Memulai Koneksi Realtime...");
     
-    // Hapus channel lama agar tidak double koneksi (penyebab WebSocket closed)
-    _supabase.removeAllChannels();
-
-    const channel = _supabase.channel('db-changes')
+    // Langsung buka channel tanpa hapus channel sebelumnya untuk test
+    const channel = _supabase.channel('admin-feed')
         .on('postgres_changes', 
-            { 
-                event: '*', // Dengarkan INSERT, UPDATE, dan DELETE
-                schema: 'public', 
-                table: 'orders' 
-            }, 
+            { event: 'INSERT', schema: 'public', table: 'orders' }, 
             async (payload) => {
-                console.log("Data Berubah:", payload);
-                
-                // Jika ada order baru masuk (INSERT)
-                if (payload.eventType === 'INSERT') {
-                    // Ambil detail data lengkap (termasuk join table)
-                    const { data } = await _supabase
-                        .from('orders')
-                        .select('*, outlets(name), staff(name), rooms(name)')
-                        .eq('id', payload.new.id)
-                        .single();
-
-                    if (data && data.status === 'pending') {
-                        appendToFeed(data, true);
-                    }
-                } 
-                
-                // Jika ada order yang diupdate atau dihapus (misal dibatalkan)
-                else {
-                    loadActiveOrders(); // Refresh total agar sinkron
-                }
+                console.log("ADA ORDER BARU!", payload);
+                loadActiveOrders(); // Gunakan refresh total agar lebih aman
             }
         )
         .subscribe((status) => {
             console.log("Status Koneksi Realtime:", status);
+            if (status === 'TIMED_OUT') {
+                console.error("Koneksi Lemot atau Diblokir Supabase!");
+            }
         });
 }
         async function loadActiveOrders() {
