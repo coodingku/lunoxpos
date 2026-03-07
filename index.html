@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUNOX POS - Multi Outlet</title>
+    <title>LUNOX POS - Minimalist</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -23,7 +23,6 @@
             @page { size: auto; margin: 0mm; }
         }
 
-        /* Fixed Table Scroll */
         .history-scroll { max-height: calc(100vh - 250px); overflow-y: auto; }
     </style>
 </head>
@@ -79,13 +78,14 @@
         <div id="page-bar" class="page-content">
             <div class="flex flex-col lg:flex-row gap-6">
                 <div class="flex-1 space-y-6">
-                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center">
-                        <div class="relative flex-1 w-full">
+                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
+                        <div class="relative w-full">
                             <i class="fa fa-search absolute left-4 top-3.5 text-gray-400"></i>
-                            <input type="text" id="search-input" oninput="filterBySearch()" placeholder="Cari menu..." class="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-2xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm">
+                            <input type="text" id="search-input" oninput="filterBySearch()" placeholder="Cari nama menu..." class="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-2xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm">
                         </div>
-                        <div id="category-filters" class="flex gap-2 overflow-x-auto hide-scroll w-full md:w-auto"></div>
+                        <div id="category-filters" class="hidden"></div>
                     </div>
+                    
                     <div id="product-grid" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
                 </div>
 
@@ -151,7 +151,6 @@
         let allProducts = [];
         let selectedOutlet = null;
         let currentOrderProduct = null;
-        let currentCategory = 'All';
 
         async function init() {
             const { data: outlets } = await _supabase.from('outlets').select('*');
@@ -175,31 +174,28 @@
 
             allProducts = p.data || [];
             
-            // Populate Main Dropdowns
-            const roomOptions = '<option value="">-- PILIH ROOM --</option>' + r.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
-            const staffOptions = '<option value="">-- PILIH STAFF --</option>' + s.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+            document.getElementById('select-room').innerHTML = '<option value="">-- PILIH ROOM --</option>' + r.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+            document.getElementById('select-staff').innerHTML = '<option value="">-- PILIH STAFF --</option>' + s.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
             
-            document.getElementById('select-room').innerHTML = roomOptions;
-            document.getElementById('select-staff').innerHTML = staffOptions;
-            
-            // Populate History Filters
             document.getElementById('filter-room-hist').innerHTML = '<option value="">SEMUA ROOM</option>' + r.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
             document.getElementById('filter-staff-hist').innerHTML = '<option value="">SEMUA STAFF</option>' + s.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
-
-            const cats = ['All', ...new Set(allProducts.map(i => i.category))];
-            document.getElementById('category-filters').innerHTML = cats.map(c => `
-                <button onclick="filterByCategory('${c}', this)" class="category-btn whitespace-nowrap px-4 py-2 rounded-xl border font-black text-[10px] uppercase transition-all ${c==='All'?'bg-blue-600 text-white border-blue-600':'bg-white text-gray-500'}">
-                    ${c}
-                </button>
-            `).join('');
 
             renderProducts(allProducts);
         }
 
         function renderProducts(items) {
             const grid = document.getElementById('product-grid');
-            grid.innerHTML = items.length === 0 ? '<p class="col-span-full text-center py-10 text-gray-400 font-bold uppercase text-xs">Menu tidak tersedia...</p>' : 
-            items.map(i => `
+            const keyword = document.getElementById('search-input').value.trim();
+            
+            // Logika: Jika tidak mencari, hanya tampilkan 8 item teratas. Jika mencari, tampilkan semua hasil.
+            const displayItems = keyword === "" ? items.slice(0, 8) : items;
+
+            if (displayItems.length === 0) {
+                grid.innerHTML = '<p class="col-span-full text-center py-10 text-gray-400 font-bold uppercase text-xs">Menu tidak ditemukan...</p>';
+                return;
+            }
+
+            grid.innerHTML = displayItems.map(i => `
                 <div onclick="selectProduct('${i.id}', '${i.name}', ${i.price}, this)" class="bg-white p-4 rounded-3xl border-2 border-transparent shadow-sm hover:border-blue-400 cursor-pointer transition-all active:scale-95 group">
                     <div class="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mb-3 group-hover:bg-blue-600 group-hover:text-white transition">
                         <i class="fa-solid fa-mug-hot text-xs"></i>
@@ -212,22 +208,8 @@
 
         function filterBySearch() {
             const keyword = document.getElementById('search-input').value.toLowerCase();
-            const filtered = allProducts.filter(p => 
-                p.name.toLowerCase().includes(keyword) && (currentCategory === 'All' || p.category === currentCategory)
-            );
+            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword));
             renderProducts(filtered);
-        }
-
-        function filterByCategory(cat, el) {
-            currentCategory = cat;
-            document.querySelectorAll('.category-btn').forEach(b => {
-                b.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
-                b.classList.add('bg-white', 'text-gray-500');
-            });
-            el.classList.replace('bg-white', 'bg-blue-600');
-            el.classList.replace('text-gray-500', 'text-white');
-            el.classList.add('border-blue-600');
-            filterBySearch();
         }
 
         function selectProduct(id, name, price, el) {
@@ -262,7 +244,6 @@
             }]);
 
             if(!error) {
-                // Print Area Setup
                 document.getElementById('p-outlet-title').innerText = selectedOutlet.name.toUpperCase();
                 document.getElementById('p-date').innerText = new Date().toLocaleString('id-ID');
                 document.getElementById('p-room').innerText = roomEl.options[roomEl.selectedIndex].text;
@@ -289,7 +270,7 @@
             document.querySelectorAll('.selected-card').forEach(c => c.classList.remove('selected-card'));
             document.getElementById('note').value = "";
             document.getElementById('search-input').value = "";
-            filterBySearch();
+            renderProducts(allProducts);
         }
 
         async function loadHistory() {
@@ -335,7 +316,6 @@
         async function reprintOrder(id) {
             const { data: o } = await _supabase.from('orders').select('*, rooms(name), staff(name)').eq('id', id).single();
             if(!o) return;
-
             document.getElementById('p-outlet-title').innerText = selectedOutlet.name.toUpperCase();
             document.getElementById('p-date').innerText = new Date(o.created_at).toLocaleString('id-ID');
             document.getElementById('p-room').innerText = o.rooms?.name || '-';
@@ -343,7 +323,6 @@
             document.getElementById('p-note').innerText = o.table_number || '-';
             document.getElementById('p-product').innerText = o.product_name;
             document.getElementById('p-price').innerText = o.price.toLocaleString('id-ID');
-
             setTimeout(() => window.print(), 300);
         }
 
