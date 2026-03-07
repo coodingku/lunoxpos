@@ -3,125 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bar - Take Order</title>
+    <title>LUNOX POS System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .selected-card { border-color: #2563eb !important; background-color: #eff6ff !important; }
+        .selected-card { border-color: #2563eb !important; background-color: #eff6ff !important; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .active-menu { background-color: #1e293b; border-left: 4px solid #3b82f6; color: white; }
     </style>
 </head>
-<body class="bg-gray-50 p-4 pb-32">
-    <div class="max-w-md mx-auto space-y-6">
-        <h1 class="text-2xl font-black text-blue-600">LUNOX POS</h1>
+<body class="bg-gray-100 flex h-screen overflow-hidden">
 
-        <section>
-            <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">📍 Area / Room</label>
-            <div id="room-list" class="grid grid-cols-3 gap-2"></div>
-        </section>
+    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between">
+        <div>
+            <div class="p-6 text-2xl font-black text-white border-b border-slate-800">LUNOX POS</div>
+            <nav class="mt-6 space-y-1">
+                <a href="#" onclick="showPage('dashboard')" id="menu-dashboard" class="flex items-center px-6 py-4 hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-chart-line mr-3"></i> Dashboard
+                </a>
+                <a href="#" onclick="showPage('bar')" id="menu-bar" class="flex items-center px-6 py-4 hover:bg-slate-800 transition active-menu">
+                    <i class="fa-solid fa-utensils mr-3"></i> Bar (Take Order)
+                </a>
+            </nav>
+        </div>
+        <div class="p-4 border-t border-slate-800">
+            <button onclick="logout()" class="flex items-center w-full px-4 py-3 text-red-400 hover:bg-red-900/20 rounded-lg transition">
+                <i class="fa-solid fa-right-from-bracket mr-3"></i> LogOut
+            </button>
+        </div>
+    </aside>
 
-        <section>
-            <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">👤 Staff</label>
-            <div id="staff-list" class="grid grid-cols-2 gap-2"></div>
-        </section>
+    <main class="flex-1 overflow-y-auto p-8">
+        
+        <div id="page-bar" class="page-content">
+            <h2 class="text-2xl font-bold mb-6">Input Pesanan</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2 space-y-6">
+                    <div id="category-filters" class="flex gap-2 overflow-x-auto pb-2">
+                        <button onclick="filterItems('All')" class="px-4 py-2 rounded-full bg-white shadow-sm border text-sm font-bold active:bg-blue-600 active:text-white">All</button>
+                        </div>
 
-        <section>
-            <label class="block text-xs font-bold text-gray-500 mb-2 uppercase">🛒 Pilih Menu</label>
-            <div id="product-list" class="grid grid-cols-1 gap-2">
+                    <div id="product-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        </div>
                 </div>
-        </section>
 
-        <section class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-            <input type="text" id="table_note" class="w-full p-2 border-b outline-none text-sm" placeholder="Nomor Meja / Catatan (Optional)">
-        </section>
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm space-y-4">
+                        <label class="block text-xs font-black text-gray-400 uppercase">📍 Area & Staff</label>
+                        <select id="select-room" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm outline-none focus:ring-2 focus:ring-blue-500"></select>
+                        <select id="select-staff" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm outline-none focus:ring-2 focus:ring-blue-500"></select>
+                        <input type="text" id="note" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm outline-none" placeholder="Nomor Meja/Catatan">
+                        
+                        <div id="selected-info" class="p-4 bg-blue-50 rounded-xl hidden border border-blue-100">
+                            <p class="text-xs text-blue-600 font-bold uppercase">Item Terpilih:</p>
+                            <p id="display-item" class="font-black text-slate-800"></p>
+                        </div>
 
-        <button onclick="kirimOrder()" id="btnKirim" class="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-xl active:scale-95 transition-all">
-            KIRIM PESANAN
-        </button>
-    </div>
+                        <button onclick="sendOrder()" id="btnSend" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition active:scale-95">
+                            KIRIM ORDERAN
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-dashboard" class="page-content hidden text-center py-20">
+            <i class="fa-solid fa-chart-pie text-6xl text-slate-200 mb-4"></i>
+            <h2 class="text-xl font-bold text-slate-400">Dashboard Statistik Segera Hadir</h2>
+        </div>
+
+    </main>
 
     <script>
         const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-        let selectedRoom = null;
-        let selectedStaff = null;
-        let selectedProduct = null;
+        let allProducts = [];
+        let orderData = { room: '', staff: '', product: null };
 
-        async function initApp() {
-            // Ambil semua data secara paralel dari database
-            const [rResp, sResp, pResp] = await Promise.all([
+        async function init() {
+            const [r, s, p] = await Promise.all([
                 _supabase.from('rooms').select('*'),
                 _supabase.from('staff').select('*'),
                 _supabase.from('products').select('*')
             ]);
 
-            // Render Rooms
-            const rDiv = document.getElementById('room-list');
-            rResp.data.forEach(r => {
-                rDiv.innerHTML += `<div onclick="selectItem('room', '${r.id}', this)" class="bg-white border p-3 rounded-lg text-center cursor-pointer text-xs font-bold">${r.name}</div>`;
-            });
+            allProducts = p.data;
+            
+            // Render Selects
+            document.getElementById('select-room').innerHTML = '<option value="">Pilih Area...</option>' + r.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+            document.getElementById('select-staff').innerHTML = '<option value="">Pilih Staff...</option>' + s.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
 
-            // Render Staff
-            const sDiv = document.getElementById('staff-list');
-            sResp.data.forEach(s => {
-                sDiv.innerHTML += `<div onclick="selectItem('staff', '${s.id}', this)" class="bg-white border p-3 rounded-lg text-center cursor-pointer text-xs font-bold">${s.name}</div>`;
-            });
+            // Render Categories
+            const cats = ['All', ...new Set(p.data.map(i => i.category))];
+            document.getElementById('category-filters').innerHTML = cats.map(c => `<button onclick="filterItems('${c}')" class="px-5 py-2 rounded-xl bg-white border text-xs font-bold hover:bg-slate-100 transition whitespace-nowrap">${c}</button>`).join('');
 
-            // Render Products (Bentuk Kartu)
-            const pDiv = document.getElementById('product-list');
-            pResp.data.forEach(p => {
-                pDiv.innerHTML += `
-                    <div onclick="selectProduct('${p.id}', '${p.name}', ${p.price}, this)" class="bg-white border p-4 rounded-xl flex justify-between items-center cursor-pointer hover:shadow-md transition-all">
-                        <div>
-                            <p class="font-bold text-gray-800">${p.name}</p>
-                            <p class="text-blue-600 text-xs font-mono">Rp ${p.price.toLocaleString()}</p>
-                        </div>
-                        <div class="text-gray-300 text-xl">＋</div>
-                    </div>
-                `;
-            });
+            renderProducts(allProducts);
         }
 
-        function selectItem(type, id, el) {
-            document.querySelectorAll(`#${type}-list div`).forEach(d => d.classList.remove('selected-card'));
-            el.classList.add('selected-card');
-            if(type === 'room') selectedRoom = id;
-            if(type === 'staff') selectedStaff = id;
+        function renderProducts(items) {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = items.map(i => `
+                <div onclick="selectProduct('${i.id}', '${i.name}', ${i.price}, this)" class="bg-white p-4 rounded-2xl border-2 border-transparent shadow-sm hover:border-blue-400 cursor-pointer transition-all group">
+                    <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition">
+                        <i class="fa-solid fa-mug-hot"></i>
+                    </div>
+                    <p class="font-bold text-slate-800 text-sm leading-tight">${i.name}</p>
+                    <p class="text-blue-600 font-black text-xs mt-2 italic">Rp ${i.price.toLocaleString()}</p>
+                </div>
+            `).join('');
+        }
+
+        function filterItems(cat) {
+            const filtered = cat === 'All' ? allProducts : allProducts.filter(i => i.category === cat);
+            renderProducts(filtered);
         }
 
         function selectProduct(id, name, price, el) {
-            document.querySelectorAll('#product-list div').forEach(d => d.classList.remove('selected-card'));
+            document.querySelectorAll('#product-grid div').forEach(d => d.classList.remove('selected-card'));
             el.classList.add('selected-card');
-            selectedProduct = { id, name, price };
+            orderData.product = { name, price };
+            document.getElementById('selected-info').classList.remove('hidden');
+            document.getElementById('display-item').innerText = name;
         }
 
-        async function kirimOrder() {
-            if(!selectedRoom || !selectedStaff || !selectedProduct) return alert("Pilih Room, Staff, dan Menu!");
-            
-            const btn = document.getElementById('btnKirim');
-            btn.disabled = true;
-            btn.innerText = "MENGIRIM...";
+        async function sendOrder() {
+            const room = document.getElementById('select-room').value;
+            const staff = document.getElementById('select-staff').value;
+            if(!room || !staff || !orderData.product) return alert("Pilih Room, Staff, & Menu!");
+
+            const btn = document.getElementById('btnSend');
+            btn.disabled = true; btn.innerText = "MENGIRIM...";
 
             const { error } = await _supabase.from('orders').insert([{
-                product_name: selectedProduct.name,
-                price: selectedProduct.price,
-                table_number: document.getElementById('table_note').value,
-                room_id: selectedRoom,
-                staff_id: selectedStaff,
+                product_name: orderData.product.name,
+                price: orderData.product.price,
+                room_id: room,
+                staff_id: staff,
+                table_number: document.getElementById('note').value,
                 status: 'pending'
             }]);
 
-            if (error) {
-                alert("Gagal: " + error.message);
-            } else {
-                alert("✅ Pesanan Terkirim!");
-            }
-            btn.disabled = false;
-            btn.innerText = "KIRIM PESANAN";
+            if(!error) {
+                alert("✅ Order Terkirim!");
+                location.reload();
+            } else { alert(error.message); btn.disabled = false; }
         }
 
-        initApp();
+        function showPage(page) {
+            document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('nav a').forEach(a => a.classList.remove('active-menu'));
+            document.getElementById(`page-${page}`).classList.remove('hidden');
+            document.getElementById(`menu-${page}`).classList.add('active-menu');
+        }
+
+        function logout() { if(confirm("Keluar dari sistem?")) window.location.href = "about:blank"; }
+
+        init();
     </script>
 </body>
 </html>
