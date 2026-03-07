@@ -8,6 +8,22 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        @media print {
+    body * { visibility: hidden; }
+    #print-area, #print-area * { 
+        visibility: visible !important; 
+        color: black !important; /* Paksa teks warna hitam */
+    }
+    #print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%; /* Menyesuaikan driver printer POS-80C Anda */
+        margin: 0;
+        padding: 0;
+    }
+    @page { size: auto; margin: 0mm; }
+}
         .selected-card { border-color: #2563eb !important; background-color: #eff6ff !important; border-width: 3px; }
         .active-menu { background-color: #1e293b; border-left: 4px solid #3b82f6; color: white; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
@@ -212,55 +228,67 @@
             document.getElementById('display-price').innerText = "Rp " + price.toLocaleString();
         }
 
-        async function sendOrder() {
-            const roomEl = document.getElementById('select-room');
-            const staffEl = document.getElementById('select-staff');
-            const note = document.getElementById('note').value;
+       async function sendOrder() {
+    const roomEl = document.getElementById('select-room');
+    const staffEl = document.getElementById('select-staff');
+    const note = document.getElementById('note').value;
 
-            if(!roomEl.value || !staffEl.value || !currentOrderProduct) {
-                return alert("⚠️ Pilih Menu, Room, dan Staff dulu!");
-            }
+    if(!roomEl.value || !staffEl.value || !currentOrderProduct) {
+        return alert("⚠️ Pilih Menu, Room, dan Staff dulu!");
+    }
 
-            const btn = document.getElementById('btnSend');
-            btn.disabled = true; btn.innerText = "SEDANG MENGIRIM...";
+    const btn = document.getElementById('btnSend');
+    btn.disabled = true; 
+    btn.innerText = "SEDANG MENGIRIM...";
 
-            const { error } = await _supabase.from('orders').insert([{
-                product_name: currentOrderProduct.name,
-                price: currentOrderProduct.price,
-                room_id: roomEl.value,
-                staff_id: staffEl.value,
-                outlet_id: selectedOutlet.id,
-                table_number: note,
-                status: 'pending'
-            }]);
+    const { error } = await _supabase.from('orders').insert([{
+        product_name: currentOrderProduct.name,
+        price: currentOrderProduct.price,
+        room_id: roomEl.value,
+        staff_id: staffEl.value,
+        outlet_id: selectedOutlet.id,
+        table_number: note,
+        status: 'pending'
+    }]);
 
-            if(!error) {
-                // ISI DATA BILL SEBELUM PRINT
-                document.getElementById('p-outlet-title').innerText = selectedOutlet.name.toUpperCase();
-                document.getElementById('p-date').innerText = new Date().toLocaleString();
-                document.getElementById('p-room').innerText = roomEl.options[roomEl.selectedIndex].text;
-                document.getElementById('p-staff').innerText = staffEl.options[staffEl.selectedIndex].text;
-                document.getElementById('p-note').innerText = note || '-';
-                document.getElementById('p-product').innerText = currentOrderProduct.name;
-                document.getElementById('p-price').innerText = currentOrderProduct.price.toLocaleString();
+    if(!error) {
+        // --- PROSES PENGISIAN DATA KE STRUK ---
+        const pOutlet = document.getElementById('p-outlet-title');
+        const pDate = document.getElementById('p-date');
+        const pRoom = document.getElementById('p-room');
+        const pStaff = document.getElementById('p-staff');
+        const pNote = document.getElementById('p-note');
+        const pProd = document.getElementById('p-product');
+        const pPrice = document.getElementById('p-price');
 
-                // JALANKAN PRINT
-                window.print();
+        if(pOutlet) pOutlet.innerText = selectedOutlet.name.toUpperCase();
+        if(pDate) pDate.innerText = new Date().toLocaleString('id-ID');
+        if(pRoom) pRoom.innerText = roomEl.options[roomEl.selectedIndex].text;
+        if(pStaff) pStaff.innerText = staffEl.options[staffEl.selectedIndex].text;
+        if(pNote) pNote.innerText = note || '-';
+        if(pProd) pProd.innerText = currentOrderProduct.name;
+        if(pPrice) pPrice.innerText = currentOrderProduct.price.toLocaleString('id-ID');
 
-                alert("✅ Berhasil dikirim & Print Bill!");
-                
-                // Reset Pilihan Produk saja
-                currentOrderProduct = null;
-                document.getElementById('selected-info').classList.add('hidden');
-                document.querySelectorAll('.selected-card').forEach(c => c.classList.remove('selected-card'));
-                document.getElementById('note').value = "";
-                document.getElementById('search-input').value = "";
-                filterBySearch();
-            } else {
-                alert("Error: " + error.message);
-            }
-            btn.disabled = false; btn.innerText = "KIRIM & PRINT BILL";
-        }
+        // --- BERI JEDA 500ms AGAR BROWSER RENDER TEKS ---
+        setTimeout(() => {
+            window.print();
+            alert("✅ Berhasil dikirim & Print Bill!");
+            
+            // Reset Form
+            currentOrderProduct = null;
+            document.getElementById('selected-info').classList.add('hidden');
+            document.querySelectorAll('.selected-card').forEach(c => c.classList.remove('selected-card'));
+            document.getElementById('note').value = "";
+            btn.disabled = false; 
+            btn.innerText = "KIRIM & PRINT BILL";
+        }, 500);
+
+    } else {
+        alert("Error: " + error.message);
+        btn.disabled = false;
+        btn.innerText = "KIRIM & PRINT BILL";
+    }
+}
 
         function showPage(page) {
             document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
