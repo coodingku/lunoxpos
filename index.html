@@ -7,44 +7,47 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <style>
-        @media print {
-    body * { visibility: hidden; }
-    #print-area, #print-area * { 
-        visibility: visible !important; 
-        color: black !important; /* Paksa teks warna hitam */
-    }
-    #print-area {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%; /* Menyesuaikan driver printer POS-80C Anda */
-        margin: 0;
-        padding: 0;
-    }
-    @page { size: auto; margin: 0mm; }
-}
+        /* TAMPILAN UI */
         .selected-card { border-color: #2563eb !important; background-color: #eff6ff !important; border-width: 3px; }
         .active-menu { background-color: #1e293b; border-left: 4px solid #3b82f6; color: white; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
         .hide-scroll::-webkit-scrollbar { display: none; }
 
+        /* KONFIGURASI PRINT - PERBAIKAN AGAR TIDAK BLANK */
+        #print-area { display: none; } /* Tersembunyi di layar monitor */
+
         @media print {
+            /* Sembunyikan semua elemen UI aplikasi */
             body * { visibility: hidden; }
-            #print-area, #print-area * { visibility: visible; }
-            #print-area {
-                position: absolute; left: 0; top: 0; width: 58mm;
-                font-family: 'Courier New', Courier, monospace; color: black; padding: 5px;
+            
+            /* Tampilkan hanya area struk */
+            #print-area, #print-area * { 
+                visibility: visible !important; 
+                display: block !important;
+                color: black !important;
             }
-            @page { margin: 0; }
+            
+            #print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 58mm; /* Lebar standar kertas thermal */
+                font-family: 'Courier New', Courier, monospace;
+                background-color: white;
+                padding: 5px;
+            }
+            
+            /* Hilangkan Margin Browser (Header/Footer URL) */
+            @page { size: auto; margin: 0mm; }
         }
-        #print-area { display: none; }
     </style>
 </head>
 <body class="bg-gray-100 flex h-screen overflow-hidden text-slate-800">
 
     <div id="print-area">
-        <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 5px; margin-bottom: 5px;">
+        <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
             <strong id="p-outlet-title" style="font-size: 16px;">LUNOX POS</strong><br>
             <span id="p-date" style="font-size: 10px;"></span>
         </div>
@@ -52,14 +55,15 @@
             <p>Room : <span id="p-room" style="font-weight: bold;"></span></p>
             <p>Staff: <span id="p-staff"></span></p>
             <p>Note : <span id="p-note"></span></p>
-            <p style="border-bottom: 1px dashed #000; margin: 5px 0;"></p>
-            <div style="font-size: 14px; font-weight: bold;">
-                <p>ITEM: <span id="p-product"></span></p>
-                <p>TOTAL: Rp <span id="p-price"></span></p>
+            <p style="border-bottom: 1px dashed #000; margin: 8px 0;"></p>
+            <div style="font-size: 13px;">
+                <p>ITEM: <strong id="p-product"></strong></p>
+                <p>TOTAL: <strong>Rp <span id="p-price"></span></strong></p>
             </div>
         </div>
-        <div style="text-align: center; margin-top: 15px; font-size: 10px; border-top: 1px dashed #000; padding-top: 5px;">
-            *** PESANAN DIPROSES ***
+        <div style="text-align: center; margin-top: 20px; font-size: 10px; border-top: 1px dashed #000; padding-top: 8px;">
+            *** PESANAN SEDANG DIPROSES ***<br>
+            Terima Kasih
         </div>
     </div>
 
@@ -73,18 +77,18 @@
     <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex">
         <div class="p-6 border-b border-slate-800">
             <div class="text-2xl font-black text-white italic">LUNOX <span class="text-blue-500">POS</span></div>
-            <div id="active-outlet-badge" class="mt-2 text-[10px] bg-blue-600 text-white px-2 py-1 rounded inline-block font-bold">LOADING...</div>
+            <div id="active-outlet-badge" class="mt-2 text-[10px] bg-blue-600 text-white px-2 py-1 rounded inline-block font-bold">MEMUAT...</div>
         </div>
         <nav class="mt-4 flex-1">
             <a href="#" onclick="showPage('bar')" id="menu-bar" class="flex items-center px-6 py-4 active-menu transition">
-                <i class="fa-solid fa-cash-register mr-3"></i> Take Order
+                <i class="fa-solid fa-cash-register mr-3 text-sm"></i> Take Order
             </a>
             <a href="#" onclick="showPage('dashboard')" id="menu-dashboard" class="flex items-center px-6 py-4 hover:bg-slate-800 transition">
-                <i class="fa-solid fa-chart-line mr-3"></i> Riwayat
+                <i class="fa-solid fa-chart-line mr-3 text-sm"></i> Riwayat
             </a>
         </nav>
         <button onclick="location.reload()" class="p-6 text-xs font-bold text-slate-500 hover:text-white border-t border-slate-800 text-left uppercase">
-            <i class="fa-solid fa-right-from-bracket mr-2"></i> Ganti Outlet
+            <i class="fa-solid fa-rotate mr-2"></i> Ganti Outlet
         </button>
     </aside>
 
@@ -96,7 +100,7 @@
                     <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center">
                         <div class="relative flex-1 w-full">
                             <i class="fa fa-search absolute left-4 top-3.5 text-gray-400"></i>
-                            <input type="text" id="search-input" oninput="filterBySearch()" placeholder="Cari menu..." class="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-2xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm">
+                            <input type="text" id="search-input" oninput="filterBySearch()" placeholder="Cari nama menu..." class="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-2xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm">
                         </div>
                         <div id="category-filters" class="flex gap-2 overflow-x-auto hide-scroll w-full md:w-auto"></div>
                     </div>
@@ -107,22 +111,22 @@
                 <div class="w-full lg:w-80">
                     <div class="bg-white p-6 rounded-3xl shadow-xl border border-gray-100 sticky top-4">
                         <h3 class="font-black text-slate-800 mb-4 flex items-center">
-                            <i class="fa fa-shopping-cart mr-2 text-blue-600"></i> DETAIL ORDER
+                            <i class="fa fa-shopping-bag mr-2 text-blue-600"></i> DETAIL ORDER
                         </h3>
                         
                         <div class="space-y-3 mb-6">
                             <select id="select-room" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200"></select>
                             <select id="select-staff" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200"></select>
-                            <input type="text" id="note" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200" placeholder="Meja / Nama Tamu">
+                            <input type="text" id="note" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200" placeholder="No. Meja / Nama Tamu">
                         </div>
 
                         <div id="selected-info" class="p-4 bg-blue-50 rounded-2xl hidden border border-blue-200 mb-6">
-                            <p class="text-[10px] text-blue-600 font-black uppercase tracking-tighter">Menu Terpilih:</p>
+                            <p class="text-[10px] text-blue-600 font-black uppercase">Menu Terpilih:</p>
                             <p id="display-item" class="font-black text-slate-800 text-lg leading-tight"></p>
                             <p id="display-price" class="text-blue-700 font-bold text-sm mt-1"></p>
                         </div>
 
-                        <button onclick="sendOrder()" id="btnSend" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-blue-700 active:scale-95 transition-all uppercase">
+                        <button onclick="sendOrder()" id="btnSend" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest">
                             KIRIM & PRINT BILL
                         </button>
                     </div>
@@ -130,7 +134,8 @@
             </div>
         </div>
 
-        <div id="page-dashboard" class="page-content hidden py-10 text-center">
+        <div id="page-dashboard" class="page-content hidden py-20 text-center">
+            <i class="fa-solid fa-history text-6xl text-slate-200 mb-4"></i>
             <h2 class="text-xl font-bold text-slate-400">Riwayat Pesanan Segera Hadir</h2>
         </div>
     </main>
@@ -148,8 +153,8 @@
         async function init() {
             const { data: outlets } = await _supabase.from('outlets').select('*');
             document.getElementById('outlet-list-btns').innerHTML = outlets.map(o => `
-                <button onclick="chooseOutlet('${o.id}', '${o.name}')" class="w-full p-5 bg-slate-800 hover:bg-blue-600 text-white rounded-2xl font-black flex justify-between items-center transition-all">
-                    ${o.name} <i class="fa fa-chevron-right"></i>
+                <button onclick="chooseOutlet('${o.id}', '${o.name}')" class="w-full p-5 bg-slate-800 hover:bg-blue-600 text-white rounded-2xl font-black flex justify-between items-center transition-all group">
+                    ${o.name} <i class="fa fa-chevron-right text-slate-600 group-hover:text-white"></i>
                 </button>
             `).join('');
         }
@@ -171,7 +176,7 @@
 
             const cats = ['All', ...new Set(allProducts.map(i => i.category))];
             document.getElementById('category-filters').innerHTML = cats.map(c => `
-                <button onclick="filterByCategory('${c}', this)" class="category-btn px-5 py-2 rounded-xl border font-bold text-xs whitespace-nowrap transition-all ${c==='All'?'bg-blue-600 text-white':'bg-white text-gray-600'}">
+                <button onclick="filterByCategory('${c}', this)" class="category-btn px-5 py-2 rounded-xl border font-bold text-xs transition-all ${c==='All'?'bg-blue-600 text-white':'bg-white text-gray-600'}">
                     ${c}
                 </button>
             `).join('');
@@ -181,14 +186,11 @@
 
         function renderProducts(items) {
             const grid = document.getElementById('product-grid');
-            if (items.length === 0) {
-                grid.innerHTML = '<p class="col-span-full text-center py-10 text-gray-400 font-bold">Produk tidak ditemukan...</p>';
-                return;
-            }
-            grid.innerHTML = items.map(i => `
+            grid.innerHTML = items.length === 0 ? '<p class="col-span-full text-center py-10 text-gray-400 font-bold">Menu tidak ditemukan...</p>' : 
+            items.map(i => `
                 <div onclick="selectProduct('${i.id}', '${i.name}', ${i.price}, this)" class="bg-white p-5 rounded-3xl border-2 border-transparent shadow-sm hover:border-blue-400 cursor-pointer transition-all active:scale-95 group">
                     <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-3 group-hover:bg-blue-600 group-hover:text-white transition">
-                        <i class="fa-solid fa-mug-hot"></i>
+                        <i class="fa-solid fa-bowl-food"></i>
                     </div>
                     <p class="font-black text-slate-800 text-sm leading-tight h-10 overflow-hidden uppercase">${i.name}</p>
                     <p class="text-blue-600 font-black text-xs mt-2 italic">Rp ${i.price.toLocaleString()}</p>
@@ -196,7 +198,6 @@
             `).join('');
         }
 
-        // FILTER PENCARIAN (SEARCH)
         function filterBySearch() {
             const keyword = document.getElementById('search-input').value.toLowerCase();
             const filtered = allProducts.filter(p => 
@@ -206,7 +207,6 @@
             renderProducts(filtered);
         }
 
-        // FILTER KATEGORI
         function filterByCategory(cat, el) {
             currentCategory = cat;
             document.querySelectorAll('.category-btn').forEach(b => {
@@ -215,84 +215,75 @@
             });
             el.classList.replace('bg-white', 'bg-blue-600');
             el.classList.replace('text-gray-600', 'text-white');
-            filterBySearch(); // Panggil search agar filter dobel (kategori + keyword)
+            filterBySearch();
         }
 
         function selectProduct(id, name, price, el) {
             document.querySelectorAll('#product-grid div').forEach(d => d.classList.remove('selected-card'));
             el.classList.add('selected-card');
             currentOrderProduct = { id, name, price };
-            
             document.getElementById('selected-info').classList.remove('hidden');
             document.getElementById('display-item').innerText = name;
             document.getElementById('display-price').innerText = "Rp " + price.toLocaleString();
         }
 
-       async function sendOrder() {
-    const roomEl = document.getElementById('select-room');
-    const staffEl = document.getElementById('select-staff');
-    const note = document.getElementById('note').value;
+        async function sendOrder() {
+            const roomEl = document.getElementById('select-room');
+            const staffEl = document.getElementById('select-staff');
+            const note = document.getElementById('note').value;
 
-    if(!roomEl.value || !staffEl.value || !currentOrderProduct) {
-        return alert("⚠️ Pilih Menu, Room, dan Staff dulu!");
-    }
+            if(!roomEl.value || !staffEl.value || !currentOrderProduct) {
+                return alert("⚠️ Pilih Menu, Room, dan Staff dulu!");
+            }
 
-    const btn = document.getElementById('btnSend');
-    btn.disabled = true; 
-    btn.innerText = "SEDANG MENGIRIM...";
+            const btn = document.getElementById('btnSend');
+            btn.disabled = true; btn.innerText = "MENGIRIM...";
 
-    const { error } = await _supabase.from('orders').insert([{
-        product_name: currentOrderProduct.name,
-        price: currentOrderProduct.price,
-        room_id: roomEl.value,
-        staff_id: staffEl.value,
-        outlet_id: selectedOutlet.id,
-        table_number: note,
-        status: 'pending'
-    }]);
+            const { error } = await _supabase.from('orders').insert([{
+                product_name: currentOrderProduct.name,
+                price: currentOrderProduct.price,
+                room_id: roomEl.value,
+                staff_id: staffEl.value,
+                outlet_id: selectedOutlet.id,
+                table_number: note,
+                status: 'pending'
+            }]);
 
-    if(!error) {
-        // --- PROSES PENGISIAN DATA KE STRUK ---
-        const pOutlet = document.getElementById('p-outlet-title');
-        const pDate = document.getElementById('p-date');
-        const pRoom = document.getElementById('p-room');
-        const pStaff = document.getElementById('p-staff');
-        const pNote = document.getElementById('p-note');
-        const pProd = document.getElementById('p-product');
-        const pPrice = document.getElementById('p-price');
+            if(!error) {
+                // ISI DATA KE STRUK SEBELUM PRINT
+                document.getElementById('p-outlet-title').innerText = selectedOutlet.name.toUpperCase();
+                document.getElementById('p-date').innerText = new Date().toLocaleString('id-ID');
+                document.getElementById('p-room').innerText = roomEl.options[roomEl.selectedIndex].text;
+                document.getElementById('p-staff').innerText = staffEl.options[staffEl.selectedIndex].text;
+                document.getElementById('p-note').innerText = note || '-';
+                document.getElementById('p-product').innerText = currentOrderProduct.name;
+                document.getElementById('p-price').innerText = currentOrderProduct.price.toLocaleString('id-ID');
 
-        if(pOutlet) pOutlet.innerText = selectedOutlet.name.toUpperCase();
-        if(pDate) pDate.innerText = new Date().toLocaleString('id-ID');
-        if(pRoom) pRoom.innerText = roomEl.options[roomEl.selectedIndex].text;
-        if(pStaff) pStaff.innerText = staffEl.options[staffEl.selectedIndex].text;
-        if(pNote) pNote.innerText = note || '-';
-        if(pProd) pProd.innerText = currentOrderProduct.name;
-        if(pPrice) pPrice.innerText = currentOrderProduct.price.toLocaleString('id-ID');
-
-        // --- BERI JEDA 500ms AGAR BROWSER RENDER TEKS ---
-        setTimeout(() => {
-            window.print();
-            alert("✅ Berhasil dikirim & Print Bill!");
-            
-            // Reset Form
-            currentOrderProduct = null;
-            document.getElementById('selected-info').classList.add('hidden');
-            document.querySelectorAll('.selected-card').forEach(c => c.classList.remove('selected-card'));
-            document.getElementById('note').value = "";
-            btn.disabled = false; 
-            btn.innerText = "KIRIM & PRINT BILL";
-        }, 500);
-
-    } else {
-        alert("Error: " + error.message);
-        btn.disabled = false;
-        btn.innerText = "KIRIM & PRINT BILL";
-    }
-}
+                // JEDA AGAR DATA DI-RENDER OLEH BROWSER
+                setTimeout(() => {
+                    window.print();
+                    alert("✅ Order Berhasil Terkirim & Cetak!");
+                    
+                    // Reset Field
+                    currentOrderProduct = null;
+                    document.getElementById('selected-info').classList.add('hidden');
+                    document.querySelectorAll('.selected-card').forEach(c => c.classList.remove('selected-card'));
+                    document.getElementById('note').value = "";
+                    document.getElementById('search-input').value = "";
+                    filterBySearch();
+                    btn.disabled = false; btn.innerText = "KIRIM & PRINT BILL";
+                }, 300);
+            } else {
+                alert("Gagal: " + error.message);
+                btn.disabled = false; btn.innerText = "KIRIM & PRINT BILL";
+            }
+        }
 
         function showPage(page) {
             document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('nav a').forEach(a => a.classList.remove('active-menu'));
             document.getElementById(`page-${page}`).classList.remove('hidden');
+            document.getElementById(`menu-${page}`).classList.add('active-menu');
         }
 
         init();
