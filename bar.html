@@ -8,60 +8,91 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-100 p-5">
-    <div class="max-w-md mx-auto bg-white p-6 rounded-xl shadow-md">
-        <h2 class="text-2xl font-bold mb-4 text-blue-600">Input Pesanan Baru</h2>
+    <div class="max-w-md mx-auto bg-white p-6 rounded-xl shadow-md border-t-4 border-blue-600">
+        <h2 class="text-2xl font-bold mb-1 text-blue-600">POS Take Order</h2>
+        <p class="text-gray-500 text-sm mb-6">Input pesanan dari sisi Bar</p>
         
         <div class="space-y-4">
             <div>
-                <label class="block text-sm font-medium">Nama Produk</label>
-                <input type="text" id="product" class="w-full p-2 border rounded-lg" placeholder="Contoh: Kopi Susu">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Nama Produk</label>
+                <input type="text" id="product" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Es Kopi Aren">
             </div>
             <div>
-                <label class="block text-sm font-medium">Harga (Rp)</label>
-                <input type="number" id="price" class="w-full p-2 border rounded-lg" placeholder="15000">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Harga (Rp)</label>
+                <input type="number" id="price" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="15000">
             </div>
             <div>
-                <label class="block text-sm font-medium">No. Meja</label>
-                <input type="text" id="table" class="w-full p-2 border rounded-lg" placeholder="Meja 01">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">No. Meja / Nama Pelanggan</label>
+                <input type="text" id="table" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Meja 05 / Budi">
             </div>
-            <button onclick="kirimOrder()" id="btnKirim" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">
+            <button onclick="kirimOrder()" id="btnKirim" class="w-full bg-blue-600 text-white py-4 rounded-lg font-bold hover:bg-blue-700 active:scale-95 transition-all shadow-lg">
                 Kirim ke Kasir
             </button>
         </div>
-        <p id="msg" class="mt-4 text-center text-green-600 hidden font-semibold text-sm">Berhasil Terkirim!</p>
+
+        <div id="msg" class="mt-4 p-3 bg-green-100 text-green-700 rounded-lg hidden text-center font-bold animate-pulse">
+            ✅ Pesanan Terkirim!
+        </div>
     </div>
 
     <script>
-        // GANTI DENGAN DATA SUPABASE KAMU
-        const SB_URL = "mbzoydcehhvjdqfefflo";
+        // KONFIGURASI SUPABASE (Sudah Diperbaiki)
+        const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
-        const supabase = supabase.createClient(SB_URL, SB_KEY);
+        
+        // Inisialisasi Supabase Client
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
         async function kirimOrder() {
             const product = document.getElementById('product').value;
             const price = document.getElementById('price').value;
             const table = document.getElementById('table').value;
             const btn = document.getElementById('btnKirim');
+            const msg = document.getElementById('msg');
 
-            if(!product || !price) return alert("Isi nama produk & harga!");
+            // Validasi Sederhana
+            if(!product || !price) {
+                alert("Mohon isi Nama Produk dan Harga!");
+                return;
+            }
 
+            // Animasi Loading
             btn.disabled = true;
-            btn.innerText = "Mengirim...";
+            btn.innerHTML = `<span class="animate-spin inline-block mr-2">⏳</span> Mengirim...`;
 
-            const { error } = await supabase
-                .from('orders')
-                .insert([{ product_name: product, price: price, table_number: table }]);
+            try {
+                const { data, error } = await _supabase
+                    .from('orders')
+                    .insert([
+                        { 
+                            product_name: product, 
+                            price: parseInt(price), // Pastikan harga masuk sebagai angka
+                            table_number: table,
+                            status: 'pending' 
+                        }
+                    ]);
 
-            if (error) {
-                alert("Gagal: " + error.message);
-            } else {
-                document.getElementById('msg').classList.remove('hidden');
+                if (error) throw error;
+
+                // Jika Berhasil
+                msg.classList.remove('hidden');
+                
+                // Reset Form
                 document.getElementById('product').value = "";
                 document.getElementById('price').value = "";
-                setTimeout(() => document.getElementById('msg').classList.add('hidden'), 3000);
+                document.getElementById('table').value = "";
+
+                // Sembunyikan notif setelah 3 detik
+                setTimeout(() => {
+                    msg.classList.add('hidden');
+                }, 3000);
+
+            } catch (err) {
+                alert("Error: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Kirim ke Kasir";
             }
-            btn.disabled = false;
-            btn.innerText = "Kirim ke Kasir";
         }
     </script>
 </body>
