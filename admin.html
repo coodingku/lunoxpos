@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUNOX ADMIN CENTRAL - PREMIUM</title>
+    <title>LUNOX ADMIN CENTRAL - PREMIUM V2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
@@ -50,32 +51,53 @@
                 </nav>
                 <div class="flex gap-2">
                     <button id="enable-audio" onclick="activateAudio()" class="bg-yellow-500 text-slate-900 px-5 py-2 rounded-xl text-xs font-black animate-pulse"><i class="fa fa-volume-up"></i></button>
-                    <button onclick="location.reload()" class="bg-red-600 px-5 py-2 rounded-xl text-xs font-black uppercase text-white font-bold">Logout</button>
+                    <button onclick="location.reload()" class="bg-red-600 px-5 py-2 rounded-xl text-xs font-black uppercase">Logout</button>
                 </div>
             </div>
         </header>
 
         <main class="max-w-7xl mx-auto p-6">
             <div id="section-monitor" class="tab-content">
+                <div class="mb-6 flex gap-2 overflow-x-auto pb-2">
+                    <button onclick="filterMonitor('all')" class="bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl text-[10px] font-black hover:bg-slate-700">SEMUA</button>
+                    <button onclick="filterMonitor('Cabana')" class="bg-orange-600 px-4 py-2 rounded-xl text-[10px] font-black">CABANA</button>
+                    <button onclick="filterMonitor('Delta')" class="bg-blue-600 px-4 py-2 rounded-xl text-[10px] font-black">DELTA</button>
+                    <button onclick="filterMonitor('Lunox')" class="bg-purple-600 px-4 py-2 rounded-xl text-[10px] font-black">LUNOX</button>
+                </div>
                 <div id="order-feed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
             </div>
 
             <div id="section-inventory" class="tab-content hidden">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-slate-800 p-6 rounded-3xl border border-slate-700">
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <button onclick="downloadTemplate()" class="bg-emerald-600 px-4 py-3 rounded-xl text-[10px] font-black uppercase"><i class="fa fa-download mr-2"></i>Template</button>
+                        <label class="bg-blue-600 px-4 py-3 rounded-xl text-[10px] font-black uppercase cursor-pointer">
+                            <i class="fa fa-upload mr-2"></i>Import Excel
+                            <input type="file" id="import-input" class="hidden" accept=".xlsx, .xls" onchange="importExcel(event)">
+                        </label>
+                    </div>
+                    <select id="p-outlet-filter" onchange="loadProductTable()" class="bg-slate-900 p-3 rounded-xl border border-slate-700 text-xs font-black text-blue-400 outline-none">
+                        <option value="Cabana">OUTLET: CABANA</option>
+                        <option value="Delta">OUTLET: DELTA</option>
+                        <option value="Lunox">OUTLET: LUNOX</option>
+                    </select>
+                </div>
+
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div id="admin-product-form" class="bg-slate-800 p-6 rounded-3xl border border-slate-700 h-fit">
-                        <h2 class="text-xl font-black mb-6 uppercase text-blue-400">Tambah Barang</h2>
-                        <div class="space-y-4 text-slate-900">
-                            <input type="text" id="p-name" placeholder="Nama Barang" class="w-full p-3 bg-white rounded-xl font-bold outline-none">
+                    <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700 h-fit">
+                        <h2 class="text-xl font-black mb-6 uppercase text-blue-400 italic">Tambah Barang</h2>
+                        <div class="space-y-4">
+                            <input type="text" id="p-name" placeholder="Nama Barang" class="w-full p-4 bg-slate-900 rounded-xl font-bold outline-none border border-slate-700">
                             <div class="grid grid-cols-2 gap-2">
-                                <input type="number" id="p-price" placeholder="Harga" class="w-full p-3 bg-white rounded-xl font-bold outline-none">
-                                <input type="number" id="p-stock" placeholder="Stok" class="w-full p-3 bg-white rounded-xl font-bold outline-none">
+                                <input type="number" id="p-price" placeholder="Harga" class="w-full p-4 bg-slate-900 rounded-xl font-bold outline-none border border-slate-700">
+                                <input type="number" id="p-stock" placeholder="Stok" class="w-full p-4 bg-slate-900 rounded-xl font-bold outline-none border border-slate-700">
                             </div>
-                            <select id="p-cat" class="w-full p-3 bg-white rounded-xl font-bold outline-none">
+                            <select id="p-cat" class="w-full p-4 bg-slate-900 rounded-xl font-bold outline-none border border-slate-700 text-slate-400">
                                 <option value="Makanan">Makanan</option>
                                 <option value="Minuman">Minuman</option>
                                 <option value="Snack">Snack</option>
                             </select>
-                            <button onclick="saveProduct()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase">Simpan</button>
+                            <button onclick="saveProduct()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase">Simpan Produk</button>
                         </div>
                     </div>
                     <div class="lg:col-span-2 bg-slate-800 rounded-3xl border border-slate-700 overflow-hidden shadow-xl">
@@ -91,43 +113,26 @@
 
             <div id="section-report" class="tab-content hidden">
                 <div class="bg-slate-800 rounded-3xl p-6 border border-slate-700">
-                    <h2 class="text-xl font-black uppercase mb-6 italic text-blue-400">Panel Laporan</h2>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-slate-900 p-4 rounded-2xl border border-slate-700">
-                        <div>
-                            <label class="text-[9px] font-bold text-slate-500 uppercase">Tgl Mulai/Akhir</label>
-                            <div class="flex gap-1">
-                                <input type="date" id="f-start" class="w-full bg-slate-800 text-[10px] p-2 rounded border border-slate-700">
-                                <input type="date" id="f-end" class="w-full bg-slate-800 text-[10px] p-2 rounded border border-slate-700">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="text-[9px] font-bold text-slate-500 uppercase">Outlet</label>
-                            <select id="f-outlet" class="w-full bg-slate-800 text-[10px] p-2 rounded border border-slate-700">
-                                <option value="all">Semua Outlet</option>
-                                <option value="Cabana">Cabana</option>
-                                <option value="Delta">Delta</option>
-                                <option value="Lunox">Lunox</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="text-[9px] font-bold text-slate-500 uppercase">Kategori</label>
-                            <select id="f-cat" class="w-full bg-slate-800 text-[10px] p-2 rounded border border-slate-700">
-                                <option value="all">Semua</option>
-                                <option value="Makanan">Makanan</option>
-                                <option value="Minuman">Minuman</option>
-                            </select>
-                        </div>
-                        <div class="flex items-end gap-1">
-                            <button onclick="loadReports()" class="flex-1 bg-blue-600 p-2 rounded font-black text-[10px]">FILTER</button>
-                            <button onclick="exportToExcel()" class="bg-green-600 p-2 rounded text-[10px]"><i class="fa fa-file-excel"></i></button>
+                    <h2 class="text-xl font-black uppercase mb-6 italic text-blue-400">Laporan Penjualan</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8 bg-slate-900 p-4 rounded-2xl border border-slate-700">
+                        <input type="date" id="f-start" class="bg-slate-800 text-[10px] p-2 rounded border border-slate-700">
+                        <input type="date" id="f-end" class="bg-slate-800 text-[10px] p-2 rounded border border-slate-700">
+                        <select id="f-outlet" class="bg-slate-800 text-[10px] p-2 rounded border border-slate-700">
+                            <option value="all">Semua Outlet</option>
+                            <option value="Cabana">Cabana</option>
+                            <option value="Delta">Delta</option>
+                            <option value="Lunox">Lunox</option>
+                        </select>
+                        <button onclick="loadReports()" class="bg-blue-600 p-2 rounded font-black text-[10px]">FILTER DATA</button>
+                        <div class="flex gap-2">
+                            <button onclick="exportToExcel()" class="flex-1 bg-emerald-600 p-2 rounded text-[10px] font-black"><i class="fa fa-file-excel"></i> EXCEL</button>
+                            <button onclick="exportToPDF()" class="flex-1 bg-red-600 p-2 rounded text-[10px] font-black"><i class="fa fa-file-pdf"></i> PDF</button>
                         </div>
                     </div>
-
                     <div class="overflow-x-auto">
                         <table class="w-full text-left" id="main-report-table">
                             <thead class="bg-slate-900 text-slate-500 text-[10px] uppercase font-black">
-                                <tr><th class="p-4">Waktu</th><th class="p-4">Outlet</th><th class="p-4">Produk</th><th class="p-4 text-center">Qty</th><th class="p-4">Total</th><th class="p-4 text-center">Aksi</th></tr>
+                                <tr><th class="p-4">Waktu</th><th class="p-4">Outlet</th><th class="p-4">Produk</th><th class="p-4 text-center">Qty</th><th class="p-4">Total</th><th class="p-4 text-center no-print">Aksi</th></tr>
                             </thead>
                             <tbody id="report-body" class="text-sm"></tbody>
                         </table>
@@ -146,6 +151,7 @@
 
         let audioActive = false;
         let userRole = '';
+        let currentMonitorFilter = 'all';
 
         async function handleLogin() {
             const user = document.getElementById('user-input').value;
@@ -156,101 +162,139 @@
                 document.getElementById('login-overlay').classList.add('hidden');
                 document.getElementById('main-app').classList.remove('hidden');
                 document.getElementById('role-display').innerText = `Login As: ${userRole}`;
-                if(userRole === 'kasir') document.getElementById('admin-product-form').classList.add('hidden');
                 loadActiveOrders();
             } else { document.getElementById('login-error').classList.remove('hidden'); }
         }
 
-        function speakNow(text) {
-            if (!audioActive) return;
-            const msg = new SpeechSynthesisUtterance(text);
-            msg.lang = 'id-ID';
-            window.speechSynthesis.speak(msg);
+        // --- MONITORING ---
+        function filterMonitor(outlet) {
+            currentMonitorFilter = outlet;
+            loadActiveOrders();
         }
 
-        function activateAudio() {
-            const audio = document.getElementById('notif-sound');
-            audio.play().then(() => { 
-                audio.pause(); audioActive = true; 
-                document.getElementById('enable-audio').classList.replace('bg-yellow-500', 'bg-green-600');
-                speakNow("Sistem aktif.");
-            });
-        }
-
-        async function loadProductTable() {
-            const { data } = await _supabase.from('products').select('*').order('name');
-            const tbody = document.getElementById('product-list-body');
-            tbody.innerHTML = data.map(p => `
-                <tr class="border-b border-slate-700 hover:bg-slate-800">
-                    <td class="p-4 font-bold text-white">${p.name}</td>
-                    <td class="p-4 text-blue-400 font-bold">Rp ${p.price.toLocaleString()}</td>
-                    <td class="p-4 font-black ${p.stock < 10 ? 'text-red-500' : 'text-green-500'}">${p.stock}</td>
-                    <td class="p-4 text-center">
-                        ${userRole === 'admin' ? `
-                            <button onclick="editProduct('${p.id}', ${p.price}, ${p.stock})" class="text-yellow-500 mr-2"><i class="fa fa-edit"></i></button>
-                            <button onclick="deleteProduct('${p.id}')" class="text-red-500"><i class="fa fa-trash"></i></button>
-                        ` : '-'}
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        async function saveProduct() {
-            const name = document.getElementById('p-name').value;
-            const price = parseInt(document.getElementById('p-price').value);
-            const stock = parseInt(document.getElementById('p-stock').value);
-            const cat = document.getElementById('p-cat').value;
-            await _supabase.from('products').insert([{ name, price, stock, category: cat }]);
-            loadProductTable();
-        }
-
-        async function editProduct(id, oldPrice, oldStock) {
-            const p = prompt("Harga Baru:", oldPrice);
-            const s = prompt("Stok Baru:", oldStock);
-            if (p && s) {
-                await _supabase.from('products').update({ price: parseInt(p), stock: parseInt(s) }).eq('id', id);
-                loadProductTable();
-            }
-        }
-
-        async function deleteProduct(id) {
-            if (confirm("Hapus barang?")) {
-                await _supabase.from('products').delete().eq('id', id);
-                loadProductTable();
-            }
+        async function loadActiveOrders() {
+            const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('status', 'pending').order('created_at', { ascending: false });
+            const feed = document.getElementById('order-feed');
+            feed.innerHTML = '';
+            const filtered = currentMonitorFilter === 'all' ? data : data.filter(o => o.outlets?.name === currentMonitorFilter);
+            filtered.forEach(o => appendToFeed(o, false));
         }
 
         function appendToFeed(order, isNew) {
             const feed = document.getElementById('order-feed');
+            if (currentMonitorFilter !== 'all' && order.outlets?.name !== currentMonitorFilter) return;
+
             let border = (order.outlets?.name === 'Cabana') ? "outlet-cabana" : (order.outlets?.name === 'Delta') ? "outlet-delta" : "outlet-lunox";
             const card = document.createElement('div');
             card.id = `order-${order.id}`;
             card.className = `bg-slate-800 p-5 rounded-3xl shadow-xl border-b-4 border-slate-700 ${border} ${isNew ? 'animate-new' : ''}`;
             card.innerHTML = `
                 <div class="flex justify-between mb-2"><span class="text-[10px] font-black text-blue-400 uppercase">${order.outlets?.name}</span>
-                <button onclick="completeOrder('${order.id}')" class="text-slate-500 hover:text-green-500"><i class="fa fa-check-circle text-xl"></i></button></div>
+                <button onclick="completeOrder('${order.id}')" class="text-green-500 bg-green-500/10 p-2 rounded-xl"><i class="fa fa-check"></i></button></div>
                 <h3 class="font-black text-white uppercase text-lg">${order.product_name} <span class="text-yellow-500">x${order.qty || 1}</span></h3>
-                <div class="mt-4 text-[10px] text-slate-500 font-bold uppercase">${order.rooms?.name || '-'} | ${order.staff?.name || '-'}</div>
+                <div class="mt-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest">${order.rooms?.name || '-'} | ${order.staff?.name || '-'}</div>
             `;
             isNew ? feed.prepend(card) : feed.appendChild(card);
             if(isNew && audioActive) { 
-                document.getElementById('notif-sound').play(); 
-                speakNow(`Pesanan baru di ${order.outlets?.name}. ${order.product_name}, ${order.qty || 1} porsi.`);
+                document.getElementById('notif-sound').play();
+                speakNow(`Pesanan baru di ${order.outlets?.name}. ${order.product_name}.`);
             }
         }
 
-        async function loadActiveOrders() {
-            const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('status', 'pending').order('created_at', { ascending: false });
-            if (data) data.forEach(o => appendToFeed(o, false));
+        // --- INVENTORY ---
+        async function loadProductTable() {
+            const outlet = document.getElementById('p-outlet-filter').value;
+            const { data } = await _supabase.from('products').select('*').eq('outlet_name', outlet).order('name');
+            const tbody = document.getElementById('product-list-body');
+            tbody.innerHTML = data.map(p => `
+                <tr class="border-b border-slate-700 hover:bg-slate-900/50">
+                    <td class="p-4 font-bold text-white uppercase">${p.name}</td>
+                    <td class="p-4 text-blue-400 font-black">Rp ${p.price.toLocaleString()}</td>
+                    <td class="p-4 font-black ${p.stock < 10 ? 'text-red-500' : 'text-green-500'}">${p.stock}</td>
+                    <td class="p-4 text-center">
+                        <button onclick="deleteProduct('${p.id}')" class="text-slate-600 hover:text-red-500 transition"><i class="fa fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
         }
 
-        async function completeOrder(id) {
-            await _supabase.from('orders').update({ status: 'completed' }).eq('id', id);
-            const el = document.getElementById(`order-${id}`);
-            if(el) el.remove();
+        async function saveProduct() {
+            const outlet = document.getElementById('p-outlet-filter').value;
+            const name = document.getElementById('p-name').value;
+            const price = parseInt(document.getElementById('p-price').value);
+            const stock = parseInt(document.getElementById('p-stock').value);
+            const category = document.getElementById('p-cat').value;
+            if(!name || !price) return alert("Nama & Harga wajib diisi!");
+            await _supabase.from('products').insert([{ name, price, stock, category, outlet_name: outlet }]);
+            document.getElementById('p-name').value = '';
+            loadProductTable();
         }
 
-        // --- REPORT SYSTEM WITH VOID & PRINT ---
+        async function deleteProduct(id) {
+            if(confirm('Hapus produk ini?')) {
+                await _supabase.from('products').delete().eq('id', id);
+                loadProductTable();
+            }
+        }
+
+        // --- FUNGSI IMPORT EXCEL ---
+async function importExcel(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const outlet = document.getElementById('p-outlet-filter').value;
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+            // Format data sesuai kolom di Supabase
+            const formatted = json.map(row => ({
+                name: row["Nama Produk"] || row["name"],
+                price: parseInt(row["Harga"] || row["price"]) || 0,
+                stock: parseInt(row["Stok"] || row["stock"]) || 0,
+                category: row["Kategori"] || row["category"] || "Makanan",
+                outlet_name: outlet
+            })).filter(item => item.name); // Pastikan nama tidak kosong
+
+            if (formatted.length === 0) {
+                alert("Data kosong atau format kolom salah! Gunakan kolom: Nama Produk, Harga, Stok, Kategori");
+                return;
+            }
+
+            const { error } = await _supabase.from('products').insert(formatted);
+
+            if (error) throw error;
+
+            alert(`Berhasil mengimpor ${formatted.length} produk ke ${outlet}`);
+            loadProductTable();
+            event.target.value = ''; // Reset input file
+        } catch (err) {
+            console.error("Import Error:", err);
+            alert("Gagal impor: " + err.message);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// Tambahkan juga fungsi download template agar user tidak salah format
+function downloadTemplate() {
+    const data = [
+        ["Nama Produk", "Harga", "Stok", "Kategori"],
+        ["Contoh Produk A", 15000, 100, "Makanan"],
+        ["Contoh Produk B", 10000, 50, "Minuman"]
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "Template_Produk_Lunox.xlsx");
+}
+
+        // --- LAPORAN & EXPORT ---
         async function loadReports() {
             const start = document.getElementById('f-start').value;
             const end = document.getElementById('f-end').value;
@@ -260,72 +304,83 @@
             if (start) query = query.gte('created_at', start + 'T00:00:00');
             if (end) query = query.lte('created_at', end + 'T23:59:59');
 
-            const { data } = await query;
-            if (data) {
-                let filtered = data;
-                if (out !== 'all') filtered = data.filter(o => o.outlets?.name === out);
+            const { data, error } = await query;
+            if (error) return console.error(error);
 
-                document.getElementById('report-body').innerHTML = filtered.map(o => `
-                    <tr class="border-b border-slate-700 ${o.status === 'void' ? 'opacity-30 italic' : ''}">
-                        <td class="p-4 text-[9px] text-slate-400">${new Date(o.created_at).toLocaleString('id-ID')}</td>
-                        <td class="p-4 font-black uppercase text-orange-400">${o.outlets?.name || '-'}</td>
-                        <td class="p-4 uppercase text-white font-bold">${o.product_name} ${o.status === 'void' ? '[VOID]' : ''}</td>
-                        <td class="p-4 text-center">${o.qty || 1}</td>
-                        <td class="p-4 font-black">Rp ${(o.price * (o.qty || 1)).toLocaleString()}</td>
-                        <td class="p-4 text-center no-print">
-                            <div class="flex justify-center gap-2">
-                                <button onclick="printOrder('${o.id}')" class="text-white bg-slate-700 p-1 px-2 rounded hover:bg-blue-600"><i class="fa fa-print"></i></button>
-                                ${userRole === 'admin' && o.status !== 'void' ? `
-                                    <button onclick="voidOrder('${o.id}')" class="text-red-500 bg-red-900/20 p-1 px-2 rounded hover:bg-red-600 hover:text-white"><i class="fa fa-ban"></i></button>
-                                ` : ''}
-                            </div>
-                        </td>
-                    </tr>`).join('');
-            }
+            let filtered = out === 'all' ? data : data.filter(o => o.outlets?.name === out);
+            const tbody = document.getElementById('report-body');
+            tbody.innerHTML = filtered.map(o => `
+                <tr class="border-b border-slate-700 hover:bg-slate-900/50">
+                    <td class="p-4 text-[10px] text-slate-400">${new Date(o.created_at).toLocaleString('id-ID')}</td>
+                    <td class="p-4 font-black text-orange-400 uppercase text-[10px]">${o.outlets?.name || '-'}</td>
+                    <td class="p-4 text-white font-bold uppercase">${o.product_name}</td>
+                    <td class="p-4 text-center font-black text-yellow-500">${o.qty || 1}</td>
+                    <td class="p-4 font-black text-blue-400">Rp ${(o.price * (o.qty || 1)).toLocaleString()}</td>
+                    <td class="p-4 text-center no-print">
+                        <button onclick="printOrder('${o.id}')" class="text-white bg-slate-700 p-2 rounded-lg hover:bg-blue-600 transition"><i class="fa fa-print"></i></button>
+                    </td>
+                </tr>
+            `).join('');
         }
 
-        async function voidOrder(id) {
-            if(confirm("Void pesanan ini? (Data tetap tersimpan tapi tidak dihitung)")) {
-                await _supabase.from('orders').update({ status: 'void' }).eq('id', id);
-                loadReports();
-            }
+        function exportToExcel() {
+            const table = document.getElementById('main-report-table');
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Laporan" });
+            XLSX.writeFile(wb, `Laporan_Lunox_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text("LAPORAN PENJUALAN LUNOX", 14, 20);
+            doc.autoTable({ 
+                html: '#main-report-table', 
+                startY: 25,
+                didParseCell: (data) => { if (data.column.index === 5) data.cell.text = ''; }
+            });
+            doc.save("Laporan_Lunox.pdf");
         }
 
         async function printOrder(id) {
             const { data } = await _supabase.from('orders').select('*, outlets(name)').eq('id', id).single();
-            const win = window.open('', '', 'width=300,height=400');
-            win.document.write(`
-                <div style="font-family:monospace; text-align:center; width:200px">
-                    <h3>LUNOX RECEIPT</h3>
-                    <p>${data.outlets.name}<br>${new Date(data.created_at).toLocaleString()}</p>
-                    <hr>
-                    <div style="display:flex; justify-content:space-between">
-                        <span>${data.product_name} x${data.qty}</span>
-                        <span>${(data.price * data.qty).toLocaleString()}</span>
-                    </div>
-                    <hr>
-                    <p>TOTAL: Rp ${(data.price * data.qty).toLocaleString()}</p>
-                    <p>Terima Kasih</p>
-                </div>
-            `);
+            const win = window.open('', '', 'width=300,height=450');
+            win.document.write(`<div style="font-family:monospace;text-align:center;"><h3>LUNOX</h3><p>${data.outlets.name}</p><hr><p>${data.product_name} x${data.qty}</p><p>Total: Rp ${(data.price * data.qty).toLocaleString()}</p><hr></div>`);
             win.print(); win.close();
         }
 
+        async function completeOrder(id) {
+            await _supabase.from('orders').update({ status: 'completed' }).eq('id', id);
+            document.getElementById(`order-${id}`)?.remove();
+        }
+
+        // --- EXTRAS ---
         function showTab(t) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-tab'));
             document.getElementById(`section-${t}`).classList.remove('hidden');
             document.getElementById(`tab-${t}`).classList.add('active-tab');
             if(t === 'inventory') loadProductTable();
-            if(t === 'report') loadReports();
         }
 
-        _supabase.channel('custom-all-channel').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async (p) => {
+        function activateAudio() {
+            audioActive = true;
+            document.getElementById('enable-audio').classList.replace('bg-yellow-500', 'bg-green-600');
+            speakNow("Sistem Aktif");
+        }
+
+        function speakNow(text) {
+            if (!audioActive) return;
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.lang = 'id-ID';
+            window.speechSynthesis.speak(msg);
+        }
+
+        // REALTIME SUBSCRIPTION
+        _supabase.channel('admin-pos').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, async (p) => {
             const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('id', p.new.id).single();
-            if (data) appendToFeed(data, true);
+            if (data && data.status === 'pending') appendToFeed(data, true);
         }).subscribe();
 
-        function exportToExcel() { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById('main-report-table')), 'Laporan_Lunox.xlsx'); }
     </script>
 </body>
 </html>
