@@ -3,65 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUNOX POS System</title>
+    <title>LUNOX POS - Multi Outlet</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .selected-card { border-color: #2563eb !important; background-color: #eff6ff !important; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .selected-card { border-color: #2563eb !important; background-color: #eff6ff !important; border-width: 3px; }
         .active-menu { background-color: #1e293b; border-left: 4px solid #3b82f6; color: white; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="bg-gray-100 flex h-screen overflow-hidden">
 
-    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between">
+    <div id="outlet-selector" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center p-6">
+        <div class="max-w-md w-full">
+            <div class="text-center mb-10">
+                <h1 class="text-4xl font-black text-white italic">LUNOX POS</h1>
+                <p class="text-slate-400 mt-2">Pilih lokasi outlet anda bertugas</p>
+            </div>
+            <div id="outlet-list-btns" class="grid gap-4">
+                <div class="p-4 bg-slate-800 animate-pulse rounded-2xl h-16"></div>
+            </div>
+        </div>
+    </div>
+
+    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between hidden md:flex" id="main-sidebar">
         <div>
-            <div class="p-6 text-2xl font-black text-white border-b border-slate-800">LUNOX POS</div>
+            <div class="p-6 border-b border-slate-800">
+                <div class="text-2xl font-black text-white">LUNOX POS</div>
+                <div id="active-outlet-badge" class="mt-2 text-[10px] bg-blue-600 text-white px-2 py-1 rounded inline-block font-bold uppercase tracking-widest">Memuat...</div>
+            </div>
             <nav class="mt-6 space-y-1">
                 <a href="#" onclick="showPage('dashboard')" id="menu-dashboard" class="flex items-center px-6 py-4 hover:bg-slate-800 transition">
-                    <i class="fa-solid fa-chart-line mr-3"></i> Dashboard
+                    <i class="fa-solid fa-chart-line mr-3 text-sm"></i> Dashboard
                 </a>
                 <a href="#" onclick="showPage('bar')" id="menu-bar" class="flex items-center px-6 py-4 hover:bg-slate-800 transition active-menu">
-                    <i class="fa-solid fa-utensils mr-3"></i> Bar (Take Order)
+                    <i class="fa-solid fa-utensils mr-3 text-sm"></i> Take Order
                 </a>
             </nav>
         </div>
-        <div class="p-4 border-t border-slate-800">
-            <button onclick="logout()" class="flex items-center w-full px-4 py-3 text-red-400 hover:bg-red-900/20 rounded-lg transition">
-                <i class="fa-solid fa-right-from-bracket mr-3"></i> LogOut
+        <div class="p-4 border-t border-slate-800 text-center">
+            <button onclick="location.reload()" class="text-xs font-bold text-slate-500 hover:text-white transition uppercase">
+                <i class="fa-solid fa-rotate mr-1"></i> Ganti Outlet
             </button>
         </div>
     </aside>
 
-    <main class="flex-1 overflow-y-auto p-8">
+    <main class="flex-1 overflow-y-auto p-4 md:p-8">
         
         <div id="page-bar" class="page-content">
-            <h2 class="text-2xl font-bold mb-6">Input Pesanan</h2>
-            
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="lg:col-span-2 space-y-6">
-                    <div id="category-filters" class="flex gap-2 overflow-x-auto pb-2">
-                        <button onclick="filterItems('All')" class="px-4 py-2 rounded-full bg-white shadow-sm border text-sm font-bold active:bg-blue-600 active:text-white">All</button>
-                        </div>
+            <div class="flex flex-col lg:flex-row gap-6">
+                
+                <div class="flex-1 space-y-6">
+                    <div id="category-filters" class="flex gap-2 overflow-x-auto hide-scroll pb-2">
+                        <button class="px-5 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-lg">All</button>
+                    </div>
 
-                    <div id="product-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div id="product-grid" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         </div>
                 </div>
 
-                <div class="space-y-6">
-                    <div class="bg-white p-6 rounded-2xl shadow-sm space-y-4">
-                        <label class="block text-xs font-black text-gray-400 uppercase">📍 Area & Staff</label>
-                        <select id="select-room" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm outline-none focus:ring-2 focus:ring-blue-500"></select>
-                        <select id="select-staff" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm outline-none focus:ring-2 focus:ring-blue-500"></select>
-                        <input type="text" id="note" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm outline-none" placeholder="Nomor Meja/Catatan">
+                <div class="w-full lg:w-80 space-y-4">
+                    <div class="bg-white p-6 rounded-3xl shadow-xl border border-gray-100 sticky top-0">
+                        <h3 class="font-black text-slate-800 mb-4 border-b pb-2">Detail Pesanan</h3>
                         
-                        <div id="selected-info" class="p-4 bg-blue-50 rounded-xl hidden border border-blue-100">
-                            <p class="text-xs text-blue-600 font-bold uppercase">Item Terpilih:</p>
-                            <p id="display-item" class="font-black text-slate-800"></p>
+                        <div class="space-y-3 mb-6">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Konfigurasi</label>
+                            <select id="select-room" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200"></select>
+                            <select id="select-staff" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200"></select>
+                            <input type="text" id="note" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200" placeholder="No. Meja / Nama">
                         </div>
 
-                        <button onclick="sendOrder()" id="btnSend" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition active:scale-95">
-                            KIRIM ORDERAN
+                        <div id="selected-info" class="p-4 bg-blue-50 rounded-2xl hidden border border-blue-100 mb-6">
+                            <p class="text-[10px] text-blue-600 font-bold uppercase">Item:</p>
+                            <p id="display-item" class="font-black text-slate-800 text-lg leading-tight"></p>
+                        </div>
+
+                        <button onclick="sendOrder()" id="btnSend" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest">
+                            Kirim Order
                         </button>
                     </div>
                 </div>
@@ -72,7 +91,6 @@
             <i class="fa-solid fa-chart-pie text-6xl text-slate-200 mb-4"></i>
             <h2 class="text-xl font-bold text-slate-400">Dashboard Statistik Segera Hadir</h2>
         </div>
-
     </main>
 
     <script>
@@ -81,9 +99,26 @@
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
         let allProducts = [];
-        let orderData = { room: '', staff: '', product: null };
+        let selectedOutlet = null;
+        let currentOrder = { product: null };
 
         async function init() {
+            // 1. Ambil Data Outlets dulu untuk overlay
+            const { data: outlets } = await _supabase.from('outlets').select('*');
+            const listDiv = document.getElementById('outlet-list-btns');
+            listDiv.innerHTML = outlets.map(o => `
+                <button onclick="chooseOutlet('${o.id}', '${o.name}')" class="w-full p-5 bg-slate-800 hover:bg-blue-600 text-white rounded-2xl font-black flex justify-between items-center transition-all group">
+                    ${o.name} <i class="fa-solid fa-chevron-right text-slate-600 group-hover:text-white"></i>
+                </button>
+            `).join('');
+        }
+
+        async function chooseOutlet(id, name) {
+            selectedOutlet = { id, name };
+            document.getElementById('outlet-selector').classList.add('hidden');
+            document.getElementById('active-outlet-badge').innerText = name;
+            
+            // 2. Ambil data Room, Staff, Product
             const [r, s, p] = await Promise.all([
                 _supabase.from('rooms').select('*'),
                 _supabase.from('staff').select('*'),
@@ -91,14 +126,12 @@
             ]);
 
             allProducts = p.data;
-            
-            // Render Selects
-            document.getElementById('select-room').innerHTML = '<option value="">Pilih Area...</option>' + r.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
-            document.getElementById('select-staff').innerHTML = '<option value="">Pilih Staff...</option>' + s.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+            document.getElementById('select-room').innerHTML = '<option value="">-- Pilih Room --</option>' + r.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+            document.getElementById('select-staff').innerHTML = '<option value="">-- Pilih Staff --</option>' + s.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
 
-            // Render Categories
+            // Filter Kategori
             const cats = ['All', ...new Set(p.data.map(i => i.category))];
-            document.getElementById('category-filters').innerHTML = cats.map(c => `<button onclick="filterItems('${c}')" class="px-5 py-2 rounded-xl bg-white border text-xs font-bold hover:bg-slate-100 transition whitespace-nowrap">${c}</button>`).join('');
+            document.getElementById('category-filters').innerHTML = cats.map(c => `<button onclick="filterItems('${c}', this)" class="category-btn px-5 py-2 rounded-xl bg-white border text-xs font-bold hover:bg-slate-50 transition whitespace-nowrap">${c}</button>`).join('');
 
             renderProducts(allProducts);
         }
@@ -106,17 +139,20 @@
         function renderProducts(items) {
             const grid = document.getElementById('product-grid');
             grid.innerHTML = items.map(i => `
-                <div onclick="selectProduct('${i.id}', '${i.name}', ${i.price}, this)" class="bg-white p-4 rounded-2xl border-2 border-transparent shadow-sm hover:border-blue-400 cursor-pointer transition-all group">
-                    <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 mb-3 group-hover:bg-blue-600 group-hover:text-white transition">
-                        <i class="fa-solid fa-mug-hot"></i>
+                <div onclick="selectProduct('${i.id}', '${i.name}', ${i.price}, this)" class="bg-white p-5 rounded-3xl border-2 border-transparent shadow-sm hover:border-blue-400 cursor-pointer transition-all group active:scale-95">
+                    <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-blue-600 mb-4 group-hover:bg-blue-600 group-hover:text-white transition">
+                        <i class="fa-solid fa-bowl-food"></i>
                     </div>
-                    <p class="font-bold text-slate-800 text-sm leading-tight">${i.name}</p>
-                    <p class="text-blue-600 font-black text-xs mt-2 italic">Rp ${i.price.toLocaleString()}</p>
+                    <p class="font-black text-slate-800 text-sm leading-tight h-10 overflow-hidden">${i.name}</p>
+                    <p class="text-blue-600 font-black text-xs mt-2 uppercase italic">Rp ${i.price.toLocaleString()}</p>
                 </div>
             `).join('');
         }
 
-        function filterItems(cat) {
+        function filterItems(cat, el) {
+            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('bg-blue-600', 'text-white'));
+            if(el) el.classList.add('bg-blue-600', 'text-white');
+            
             const filtered = cat === 'All' ? allProducts : allProducts.filter(i => i.category === cat);
             renderProducts(filtered);
         }
@@ -124,7 +160,7 @@
         function selectProduct(id, name, price, el) {
             document.querySelectorAll('#product-grid div').forEach(d => d.classList.remove('selected-card'));
             el.classList.add('selected-card');
-            orderData.product = { name, price };
+            currentOrder.product = { name, price };
             document.getElementById('selected-info').classList.remove('hidden');
             document.getElementById('display-item').innerText = name;
         }
@@ -132,24 +168,31 @@
         async function sendOrder() {
             const room = document.getElementById('select-room').value;
             const staff = document.getElementById('select-staff').value;
-            if(!room || !staff || !orderData.product) return alert("Pilih Room, Staff, & Menu!");
+            const note = document.getElementById('note').value;
+
+            if(!room || !staff || !currentOrder.product) return alert("⚠️ Mohon lengkapi pilihan Menu, Room, dan Staff!");
 
             const btn = document.getElementById('btnSend');
             btn.disabled = true; btn.innerText = "MENGIRIM...";
 
             const { error } = await _supabase.from('orders').insert([{
-                product_name: orderData.product.name,
-                price: orderData.product.price,
+                product_name: currentOrder.product.name,
+                price: currentOrder.product.price,
                 room_id: room,
                 staff_id: staff,
-                table_number: document.getElementById('note').value,
+                outlet_id: selectedOutlet.id, // ID OUTLET TERKIRIM KE ADMIN
+                table_number: note,
                 status: 'pending'
             }]);
 
             if(!error) {
-                alert("✅ Order Terkirim!");
-                location.reload();
-            } else { alert(error.message); btn.disabled = false; }
+                alert("✅ Berhasil! Pesanan " + selectedOutlet.name + " telah terkirim.");
+                // Reset Selection saja agar staff tidak perlu input staff/room ulang jika sama
+                currentOrder.product = null;
+                document.getElementById('selected-info').classList.add('hidden');
+                document.querySelectorAll('.selected-card').forEach(c => c.classList.remove('selected-card'));
+            } else { alert(err.message); }
+            btn.disabled = false; btn.innerText = "KIRIM ORDER";
         }
 
         function showPage(page) {
@@ -158,8 +201,6 @@
             document.getElementById(`page-${page}`).classList.remove('hidden');
             document.getElementById(`menu-${page}`).classList.add('active-menu');
         }
-
-        function logout() { if(confirm("Keluar dari sistem?")) window.location.href = "about:blank"; }
 
         init();
     </script>
