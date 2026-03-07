@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUNOX ADMIN CENTRAL - VOICE ACTIVE</title>
+    <title>LUNOX ADMIN CENTRAL - PREMIUM</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -18,70 +18,107 @@
         .active-tab { background-color: #3b82f6 !important; color: white !important; border-radius: 12px; }
         .animate-new { animation: slideIn 0.5s ease-out; border: 2px solid #fbbf24; }
         @keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
 
-    <header class="bg-slate-800 p-6 shadow-2xl sticky top-0 z-50 border-b border-slate-700">
-        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-center gap-6">
-            <div>
-                <h1 class="text-2xl font-black tracking-tighter italic">LUNOX <span class="text-blue-500 underline">ADMIN</span></h1>
-                <p id="connection-status" class="text-[10px] font-bold uppercase tracking-widest text-slate-500">🟢 Menghubungkan...</p>
+    <div id="login-overlay" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-6">
+        <div class="bg-slate-800 p-8 rounded-3xl w-full max-w-md border border-slate-700 shadow-2xl">
+            <h1 class="text-3xl font-black italic text-center mb-8 uppercase">Lunox <span class="text-blue-500">Auth</span></h1>
+            <div class="space-y-4">
+                <input type="text" id="user-input" placeholder="Username" class="w-full p-4 bg-slate-900 rounded-xl outline-none border border-slate-700 font-bold text-white">
+                <input type="password" id="pass-input" placeholder="Password" class="w-full p-4 bg-slate-900 rounded-xl outline-none border border-slate-700 font-bold text-white">
+                <button onclick="handleLogin()" class="w-full bg-blue-600 py-4 rounded-xl font-black uppercase hover:bg-blue-700 transition">Login</button>
+                <p id="login-error" class="text-red-500 text-xs text-center font-bold hidden">Username atau Password Salah!</p>
             </div>
-
-            <nav class="flex bg-slate-900 p-1 rounded-2xl border border-slate-700">
-                <button onclick="showTab('monitor')" id="tab-monitor" class="px-6 py-2 text-xs font-black active-tab transition-all">MONITORING</button>
-                <button onclick="showTab('inventory')" id="tab-inventory" class="px-6 py-2 text-xs font-black hover:text-white transition-all">PRODUK</button>
-                <button onclick="showTab('report')" id="tab-report" class="px-6 py-2 text-xs font-black hover:text-white transition-all">LAPORAN</button>
-            </nav>
-
-            <button id="enable-audio" onclick="activateAudio()" class="bg-yellow-500 text-slate-900 px-5 py-2 rounded-xl text-xs font-black animate-pulse shadow-lg">
-                <i class="fa fa-volume-up mr-2"></i> AKTIFKAN NOTIF SUARA
-            </button>
         </div>
-    </header>
+    </div>
 
-    <main class="max-w-7xl mx-auto p-6">
-        <div id="section-monitor" class="tab-content">
-            <div id="order-feed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </div>
+    <div id="main-app" class="hidden">
+        <header class="bg-slate-800 p-6 shadow-2xl sticky top-0 z-50 border-b border-slate-700">
+            <div class="max-w-7xl mx-auto flex flex-col lg:flex-row justify-between items-center gap-6">
+                <div>
+                    <h1 class="text-2xl font-black tracking-tighter italic">LUNOX <span class="text-blue-500 underline">ADMIN</span></h1>
+                    <p id="role-display" class="text-[10px] font-black uppercase text-blue-400"></p>
+                </div>
 
-        <div id="section-inventory" class="tab-content hidden text-slate-900">
-            <div class="max-w-xl mx-auto bg-slate-800 p-8 rounded-3xl border border-slate-700 shadow-xl">
-                <h2 class="text-xl font-black mb-6 uppercase tracking-widest text-white">Tambah Menu</h2>
-                <div class="space-y-4">
-                    <input type="text" id="p-name" placeholder="Nama Barang" class="w-full p-4 bg-white rounded-xl font-bold outline-none">
-                    <select id="p-cat" class="w-full p-4 bg-white rounded-xl font-bold outline-none">
-                        <option value="Makanan">Makanan</option>
-                        <option value="Minuman">Minuman</option>
-                        <option value="Snack">Snack</option>
-                    </select>
-                    <input type="number" id="p-price" placeholder="Harga Satuan" class="w-full p-4 bg-white rounded-xl font-bold outline-none">
-                    <button onclick="saveProduct()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-black hover:bg-blue-700 uppercase">Simpan</button>
+                <nav class="flex bg-slate-900 p-1 rounded-2xl border border-slate-700">
+                    <button onclick="showTab('monitor')" id="tab-monitor" class="px-6 py-2 text-xs font-black active-tab transition-all">MONITORING</button>
+                    <button onclick="showTab('inventory')" id="tab-inventory" class="px-6 py-2 text-xs font-black hover:text-white transition-all">PRODUK</button>
+                    <button onclick="showTab('report')" id="tab-report" class="px-6 py-2 text-xs font-black hover:text-white transition-all">LAPORAN</button>
+                </nav>
+
+                <div class="flex gap-2">
+                    <button id="enable-audio" onclick="activateAudio()" class="bg-yellow-500 text-slate-900 px-5 py-2 rounded-xl text-xs font-black animate-pulse">
+                        <i class="fa fa-volume-up"></i> SUARA
+                    </button>
+                    <button onclick="location.reload()" class="bg-red-600 px-5 py-2 rounded-xl text-xs font-black">LOGOUT</button>
                 </div>
             </div>
-        </div>
+        </header>
 
-        <div id="section-report" class="tab-content hidden">
-            <div class="bg-slate-800 rounded-3xl p-6 border border-slate-700">
-                <div class="flex justify-between mb-6">
-                    <h2 class="text-xl font-black italic uppercase">Database Laporan</h2>
-                    <div class="flex gap-2">
-                        <button onclick="exportToExcel()" class="bg-green-600 px-4 py-2 rounded-lg text-xs font-bold">EXCEL</button>
-                        <button onclick="exportToPDF()" class="bg-red-600 px-4 py-2 rounded-lg text-xs font-bold">PDF</button>
+        <main class="max-w-7xl mx-auto p-6">
+            <div id="section-monitor" class="tab-content">
+                <div id="order-feed" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+
+            <div id="section-inventory" class="tab-content hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div id="admin-product-form" class="bg-slate-800 p-6 rounded-3xl border border-slate-700 h-fit">
+                        <h2 class="text-xl font-black mb-6 uppercase text-blue-400">Tambah Barang</h2>
+                        <div class="space-y-4 text-slate-900">
+                            <input type="text" id="p-name" placeholder="Nama Barang" class="w-full p-3 bg-white rounded-xl font-bold outline-none">
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="number" id="p-price" placeholder="Harga" class="w-full p-3 bg-white rounded-xl font-bold outline-none">
+                                <input type="number" id="p-stock" placeholder="Stok" class="w-full p-3 bg-white rounded-xl font-bold outline-none">
+                            </div>
+                            <select id="p-cat" class="w-full p-3 bg-white rounded-xl font-bold outline-none">
+                                <option value="Makanan">Makanan</option>
+                                <option value="Minuman">Minuman</option>
+                                <option value="Snack">Snack</option>
+                            </select>
+                            <button onclick="saveProduct()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-black uppercase">Simpan</button>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-2 bg-slate-800 rounded-3xl border border-slate-700 overflow-hidden shadow-xl">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-900 text-slate-500 text-[10px] uppercase font-black">
+                                <tr>
+                                    <th class="p-4">Nama Produk</th>
+                                    <th class="p-4">Harga</th>
+                                    <th class="p-4">Stok</th>
+                                    <th class="p-4 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="product-list-body" class="text-sm"></tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left" id="main-report-table">
-                        <thead class="text-slate-500 text-[10px] uppercase border-b border-slate-700">
-                            <tr><th class="p-4">Waktu</th><th class="p-4">Outlet</th><th class="p-4">Produk</th><th class="p-4">Harga</th></tr>
-                        </thead>
-                        <tbody id="report-body" class="text-sm"></tbody>
-                    </table>
+            </div>
+
+            <div id="section-report" class="tab-content hidden">
+                <div class="bg-slate-800 rounded-3xl p-6 border border-slate-700">
+                    <div class="flex justify-between mb-6">
+                        <h2 class="text-xl font-black uppercase italic">Database Laporan</h2>
+                        <div class="flex gap-2">
+                            <button onclick="exportToExcel()" class="bg-green-600 px-4 py-2 rounded-lg text-xs font-bold">EXCEL</button>
+                            <button onclick="exportToPDF()" class="bg-red-600 px-4 py-2 rounded-lg text-xs font-bold">PDF</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left" id="main-report-table">
+                            <thead class="text-slate-500 text-[10px] uppercase border-b border-slate-700">
+                                <tr><th class="p-4">Waktu</th><th class="p-4">Outlet</th><th class="p-4">Produk</th><th class="p-4">Harga</th></tr>
+                            </thead>
+                            <tbody id="report-body" class="text-sm"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
     <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
@@ -91,57 +128,114 @@
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
         let audioActive = false;
+        let userRole = '';
 
-        // FUNGSI SUARA MANUSIA
+        // --- AUTH SYSTEM ---
+        async function handleLogin() {
+            const user = document.getElementById('user-input').value;
+            const pass = document.getElementById('pass-input').value;
+            const { data, error } = await _supabase.from('users').select('*').eq('username', user).eq('password', pass).single();
+
+            if (data) {
+                userRole = data.role;
+                document.getElementById('login-overlay').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                document.getElementById('role-display').innerText = `Role: ${data.role}`;
+                
+                if(userRole === 'kasir') {
+                    document.getElementById('admin-product-form').classList.add('hidden');
+                }
+                loadActiveOrders();
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        }
+
+        // --- VOICE SYSTEM ---
         function speakNow(text) {
             if (!audioActive) return;
-            const msg = new SpeechSynthesisUtterance();
-            msg.text = text;
+            const msg = new SpeechSynthesisUtterance(text);
             msg.lang = 'id-ID';
-            msg.rate = 0.9;
             window.speechSynthesis.speak(msg);
         }
 
         function activateAudio() {
             const audio = document.getElementById('notif-sound');
             audio.play().then(() => { 
-                audio.pause(); 
-                audioActive = true; 
+                audio.pause(); audioActive = true; 
                 document.getElementById('enable-audio').classList.replace('bg-yellow-500', 'bg-green-600');
-                document.getElementById('enable-audio').innerHTML = '<i class="fa fa-check mr-2"></i> SUARA AKTIF';
-                document.getElementById('enable-audio').classList.remove('animate-pulse');
-                speakNow("Sistem suara aktif. Menunggu pesanan baru.");
+                document.getElementById('enable-audio').innerHTML = 'VOICE ON';
+                speakNow("Sistem suara aktif.");
             });
         }
 
-        async function loadActiveOrders() {
-            const { data, error } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('status', 'pending').order('created_at', { ascending: false });
-            if (data) data.forEach(order => appendToFeed(order, false));
+        // --- PRODUCT MANAGEMENT ---
+        async function loadProductTable() {
+            const { data } = await _supabase.from('products').select('*').order('name');
+            const tbody = document.getElementById('product-list-body');
+            tbody.innerHTML = data.map(p => `
+                <tr class="border-b border-slate-700 hover:bg-slate-800">
+                    <td class="p-4 font-bold text-white">${p.name}</td>
+                    <td class="p-4">Rp ${p.price.toLocaleString()}</td>
+                    <td class="p-4 font-black ${p.stock < 10 ? 'text-red-500' : 'text-green-500'}">${p.stock}</td>
+                    <td class="p-4 text-center">
+                        ${userRole === 'admin' ? `
+                            <button onclick="editProduct('${p.id}', ${p.price}, ${p.stock})" class="text-yellow-500 mr-2"><i class="fa fa-edit"></i></button>
+                            <button onclick="deleteProduct('${p.id}')" class="text-red-500"><i class="fa fa-trash"></i></button>
+                        ` : '-'}
+                    </td>
+                </tr>
+            `).join('');
         }
 
+        async function saveProduct() {
+            const name = document.getElementById('p-name').value;
+            const price = parseInt(document.getElementById('p-price').value);
+            const stock = parseInt(document.getElementById('p-stock').value);
+            const cat = document.getElementById('p-cat').value;
+            await _supabase.from('products').insert([{ name, price, stock, category: cat }]);
+            loadProductTable();
+        }
+
+        async function editProduct(id, oldPrice, oldStock) {
+            const p = prompt("Harga Baru:", oldPrice);
+            const s = prompt("Stok Baru:", oldStock);
+            if (p && s) {
+                await _supabase.from('products').update({ price: parseInt(p), stock: parseInt(s) }).eq('id', id);
+                loadProductTable();
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (confirm("Hapus barang?")) {
+                await _supabase.from('products').delete().eq('id', id);
+                loadProductTable();
+            }
+        }
+
+        // --- ORDER MONITORING ---
         function appendToFeed(order, isNew) {
             const feed = document.getElementById('order-feed');
-            let border = (order.outlets?.name === 'Cabana') ? "outlet-cabana" : (order.outlets?.name === 'Delta') ? "outlet-delta" : "outlet-lunox";
+            let border = (order.outlets?.name === 'Cabana') ? "outlet-cabana" : "outlet-lunox";
             const card = document.createElement('div');
             card.id = `order-${order.id}`;
             card.className = `bg-slate-800 p-5 rounded-3xl shadow-xl border-b-4 border-slate-700 ${border} ${isNew ? 'animate-new' : ''}`;
             card.innerHTML = `
                 <div class="flex justify-between mb-2"><span class="text-[10px] font-black text-blue-400 uppercase">${order.outlets?.name}</span>
                 <button onclick="completeOrder('${order.id}')" class="text-slate-500 hover:text-green-500"><i class="fa fa-check-circle text-xl"></i></button></div>
-                <h3 class="font-black text-white uppercase text-lg">${order.product_name}</h3>
+                <h3 class="font-black text-white uppercase text-lg">${order.product_name} <span class="text-yellow-500">x${order.qty || 1}</span></h3>
                 <div class="mt-4 text-[10px] text-slate-500 font-bold uppercase">${order.rooms?.name || '-'} | ${order.staff?.name || '-'}</div>
             `;
-            
-            if(isNew) {
-                feed.prepend(card);
-                if(audioActive) {
-                    document.getElementById('notif-sound').play();
-                    // PANGGIL SUARA MANUSIA DI SINI
-                    speakNow(`Ada pesanan baru di ${order.outlets?.name}. ${order.product_name}`);
-                }
-            } else {
-                feed.appendChild(card);
+            isNew ? feed.prepend(card) : feed.appendChild(card);
+            if(isNew && audioActive) { 
+                document.getElementById('notif-sound').play(); 
+                speakNow(`Ada pesanan baru di ${order.outlets?.name}. ${order.product_name}, ${order.qty || 1} porsi.`);
             }
+        }
+
+        async function loadActiveOrders() {
+            const { data } = await _supabase.from('orders').select('*, outlets(name), staff(name), rooms(name)').eq('status', 'pending').order('created_at', { ascending: false });
+            if (data) data.forEach(o => appendToFeed(o, false));
         }
 
         async function completeOrder(id) {
@@ -149,25 +243,16 @@
             document.getElementById(`order-${id}`).remove();
         }
 
-        async function saveProduct() {
-            const name = document.getElementById('p-name').value;
-            const cat = document.getElementById('p-cat').value;
-            const price = document.getElementById('p-price').value;
-            const { error } = await _supabase.from('products').insert([{ name, category: cat, price: parseInt(price) }]);
-            if(!error) { alert("Berhasil!"); location.reload(); }
-        }
-
+        // --- REPORT & TABS ---
         async function loadReports() {
             const { data } = await _supabase.from('orders').select('*, outlets(name)').order('created_at', { ascending: false });
-            if (data) {
-                document.getElementById('report-body').innerHTML = data.map(o => `
-                    <tr class="border-b border-slate-700">
-                        <td class="p-4 text-[11px] font-bold text-slate-500">${new Date(o.created_at).toLocaleString()}</td>
-                        <td class="p-4 font-black text-orange-400 uppercase">${o.outlets?.name}</td>
-                        <td class="p-4 font-black uppercase text-white">${o.product_name}</td>
-                        <td class="p-4 font-black">Rp ${o.price.toLocaleString()}</td>
-                    </tr>`).join('');
-            }
+            document.getElementById('report-body').innerHTML = data.map(o => `
+                <tr class="border-b border-slate-700">
+                    <td class="p-4 text-[10px]">${new Date(o.created_at).toLocaleString()}</td>
+                    <td class="p-4 font-black text-orange-400 uppercase">${o.outlets?.name}</td>
+                    <td class="p-4 uppercase text-white">${o.product_name}</td>
+                    <td class="p-4 font-black">Rp ${o.price.toLocaleString()}</td>
+                </tr>`).join('');
         }
 
         function showTab(t) {
@@ -175,6 +260,7 @@
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-tab'));
             document.getElementById(`section-${t}`).classList.remove('hidden');
             document.getElementById(`tab-${t}`).classList.add('active-tab');
+            if(t === 'inventory') loadProductTable();
             if(t === 'report') loadReports();
         }
 
@@ -183,12 +269,8 @@
             if (data) appendToFeed(data, true);
         }).subscribe();
 
-        // EXPORT EXCEL
         function exportToExcel() { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById('main-report-table')), 'Laporan_Lunox.xlsx'); }
-        // EXPORT PDF
-        function exportToPDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text("Laporan Penjualan Lunox", 14, 15); doc.autoTable({ html: '#main-report-table', startY: 20 }); doc.save("Laporan_Lunox.pdf"); }
-
-        loadActiveOrders();
+        function exportToPDF() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text("Laporan Lunox", 14, 15); doc.autoTable({ html: '#main-report-table', startY: 20 }); doc.save("Laporan_Lunox.pdf"); }
     </script>
 </body>
 </html>
