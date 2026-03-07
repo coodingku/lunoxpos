@@ -350,16 +350,66 @@
             }
         }
 
-        async function closeRoom() {
-            if(!confirm("Selesaikan transaksi ini?")) return;
-            const { error } = await _supabase.from('orders')
-                .update({ status: 'paid' })
-                .eq('room_id', activeRoom.id)
-                .neq('status', 'paid');
+      async function closeRoom() {
+    if(!activeRoom) return;
+    if(!confirm(`Selesaikan transaksi untuk ${activeRoom.name} dan cetak struk?`)) return;
 
-            if(!error) showPage('rooms');
-        }
+    // 1. Ambil data semua pesanan yang belum lunas di ruangan ini
+    const { data: finalBills, error: fetchError } = await _supabase
+        .from('orders')
+        .select('*, outlets(name), rooms(name), staff(name)')
+        .eq('room_id', activeRoom.id)
+        .neq('status', 'paid');
 
+    if (fetchError || !finalBills || finalBills.length === 0) {
+        alert("Tidak ada tagihan aktif.");
+        return;
+    }
+
+    // 2. Jalankan Proses Cetak Otomatis
+    printFinalReceipt(finalBills);
+
+    // 3. Update status menjadi 'paid' di database
+    const { error: updateError } = await _supabase
+        .from('orders')
+        .update({ status: 'paid' })
+        .eq('room_id', activeRoom.id)
+        .neq('status', 'paid');
+
+    if(!updateError) {
+        showPage('rooms');
+    } else {
+        alert("Gagal mengakhiri transaksi: " + updateError.message);
+    }
+}
+        function printFinalReceipt(orders) {
+    const first = orders[0];
+    const total = orders.reduce((sum, item) => sum + item.price, 0);
+    
+    // Set Header & Informasi
+    document.getElementById('p-title').innerText = "RECEIPT";
+    document.getElementById('p-outlet-title').innerText = selectedOutlet.name;
+    document.getElementById('p-date').innerText = new Date().toLocaleString('id-ID');
+    document.getElementById('p-room').innerText = activeRoom.name;
+    document.getElementById('p-staff').innerText = first.staff?.name || "-";
+    
+    // Tampilkan Section Total (karena saat order slip section ini mungkin di-hide)
+    document.getElementById('p-total-section').style.display = "block";
+    document.getElementById('p-total-price').innerText = total.toLocaleString();
+
+    // Generate List Item
+    const itemsHtml = orders.map(item => `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+            <span style="text-transform: uppercase;">${item.product_name}</span>
+            <span>${item.price.toLocaleString()}</span>
+        </div>
+    `).join('');
+    
+    document.getElementById('p-items-list').innerHTML = itemsHtml;
+
+    // Trigger Print Browser
+    window.print();
+}
         function filterBySearch() {
             const keyword = document.getElementById('search-input').value.toLowerCase();
             const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword));
