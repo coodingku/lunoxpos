@@ -10,114 +10,112 @@
     <style>
         .selected-card { border-color: #2563eb !important; background-color: #eff6ff !important; border-width: 3px; }
         .active-menu { background-color: #1e293b; border-left: 4px solid #3b82f6; color: white; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
         .hide-scroll::-webkit-scrollbar { display: none; }
 
-        /* --- CSS KHUSUS PRINT --- */
         @media print {
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; }
             #print-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 58mm; /* Lebar standar kertas thermal */
-                font-family: 'Courier New', Courier, monospace;
-                color: black;
-                padding: 10px;
+                position: absolute; left: 0; top: 0; width: 58mm;
+                font-family: 'Courier New', Courier, monospace; color: black; padding: 5px;
             }
             @page { margin: 0; }
         }
         #print-area { display: none; }
     </style>
 </head>
-<body class="bg-gray-100 flex h-screen overflow-hidden">
+<body class="bg-gray-100 flex h-screen overflow-hidden text-slate-800">
 
     <div id="print-area">
         <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 5px; margin-bottom: 5px;">
             <strong id="p-outlet-title" style="font-size: 16px;">LUNOX POS</strong><br>
             <span id="p-date" style="font-size: 10px;"></span>
         </div>
-        <div style="font-size: 12px; line-height: 1.3;">
+        <div style="font-size: 12px; line-height: 1.4;">
             <p>Room : <span id="p-room" style="font-weight: bold;"></span></p>
             <p>Staff: <span id="p-staff"></span></p>
-            <p>Meja : <span id="p-note"></span></p>
+            <p>Note : <span id="p-note"></span></p>
             <p style="border-bottom: 1px dashed #000; margin: 5px 0;"></p>
-            <p style="font-size: 14px; font-weight: bold;">ORDER: <span id="p-product"></span></p>
-            <p>Harga: Rp <span id="p-price"></span></p>
+            <div style="font-size: 14px; font-weight: bold;">
+                <p>ITEM: <span id="p-product"></span></p>
+                <p>TOTAL: Rp <span id="p-price"></span></p>
+            </div>
         </div>
-        <div style="text-align: center; margin-top: 10px; font-size: 10px; border-top: 1px dashed #000; padding-top: 5px;">
-            *** TIKET PESANAN ***
+        <div style="text-align: center; margin-top: 15px; font-size: 10px; border-top: 1px dashed #000; padding-top: 5px;">
+            *** PESANAN DIPROSES ***
         </div>
     </div>
 
     <div id="outlet-selector" class="fixed inset-0 bg-slate-900 z-[100] flex items-center justify-center p-6">
-        <div class="max-w-md w-full">
-            <div class="text-center mb-10">
-                <h1 class="text-4xl font-black text-white italic">LUNOX POS</h1>
-                <p class="text-slate-400 mt-2">Pilih lokasi outlet anda bertugas</p>
-            </div>
-            <div id="outlet-list-btns" class="grid gap-4">
-                <div class="p-4 bg-slate-800 animate-pulse rounded-2xl h-16"></div>
-            </div>
+        <div class="max-w-md w-full text-center">
+            <h1 class="text-4xl font-black text-white italic mb-10">LUNOX POS</h1>
+            <div id="outlet-list-btns" class="grid gap-4 text-left"></div>
         </div>
     </div>
 
-    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between hidden md:flex" id="main-sidebar">
-        <div>
-            <div class="p-6 border-b border-slate-800">
-                <div class="text-2xl font-black text-white">LUNOX POS</div>
-                <div id="active-outlet-badge" class="mt-2 text-[10px] bg-blue-600 text-white px-2 py-1 rounded inline-block font-bold uppercase tracking-widest">Memuat...</div>
-            </div>
-            <nav class="mt-6 space-y-1">
-                <a href="#" onclick="showPage('dashboard')" id="menu-dashboard" class="flex items-center px-6 py-4 hover:bg-slate-800 transition">
-                    <i class="fa-solid fa-chart-line mr-3 text-sm"></i> Dashboard
-                </a>
-                <a href="#" onclick="showPage('bar')" id="menu-bar" class="flex items-center px-6 py-4 hover:bg-slate-800 transition active-menu">
-                    <i class="fa-solid fa-utensils mr-3 text-sm"></i> Take Order
-                </a>
-            </nav>
+    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex">
+        <div class="p-6 border-b border-slate-800">
+            <div class="text-2xl font-black text-white italic">LUNOX <span class="text-blue-500">POS</span></div>
+            <div id="active-outlet-badge" class="mt-2 text-[10px] bg-blue-600 text-white px-2 py-1 rounded inline-block font-bold">LOADING...</div>
         </div>
-        <div class="p-4 border-t border-slate-800 text-center">
-            <button onclick="location.reload()" class="text-xs font-bold text-slate-500 hover:text-white transition uppercase">
-                <i class="fa-solid fa-rotate mr-1"></i> Ganti Outlet
-            </button>
-        </div>
+        <nav class="mt-4 flex-1">
+            <a href="#" onclick="showPage('bar')" id="menu-bar" class="flex items-center px-6 py-4 active-menu transition">
+                <i class="fa-solid fa-cash-register mr-3"></i> Take Order
+            </a>
+            <a href="#" onclick="showPage('dashboard')" id="menu-dashboard" class="flex items-center px-6 py-4 hover:bg-slate-800 transition">
+                <i class="fa-solid fa-chart-line mr-3"></i> Riwayat
+            </a>
+        </nav>
+        <button onclick="location.reload()" class="p-6 text-xs font-bold text-slate-500 hover:text-white border-t border-slate-800 text-left uppercase">
+            <i class="fa-solid fa-right-from-bracket mr-2"></i> Ganti Outlet
+        </button>
     </aside>
 
     <main class="flex-1 overflow-y-auto p-4 md:p-8">
         <div id="page-bar" class="page-content">
             <div class="flex flex-col lg:flex-row gap-6">
+                
                 <div class="flex-1 space-y-6">
-                    <div id="category-filters" class="flex gap-2 overflow-x-auto hide-scroll pb-2"></div>
+                    <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center">
+                        <div class="relative flex-1 w-full">
+                            <i class="fa fa-search absolute left-4 top-3.5 text-gray-400"></i>
+                            <input type="text" id="search-input" oninput="filterBySearch()" placeholder="Cari menu..." class="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-2xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm">
+                        </div>
+                        <div id="category-filters" class="flex gap-2 overflow-x-auto hide-scroll w-full md:w-auto"></div>
+                    </div>
+
                     <div id="product-grid" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
                 </div>
 
-                <div class="w-full lg:w-80 space-y-4">
-                    <div class="bg-white p-6 rounded-3xl shadow-xl border border-gray-100 sticky top-0">
-                        <h3 class="font-black text-slate-800 mb-4 border-b pb-2">Detail Pesanan</h3>
+                <div class="w-full lg:w-80">
+                    <div class="bg-white p-6 rounded-3xl shadow-xl border border-gray-100 sticky top-4">
+                        <h3 class="font-black text-slate-800 mb-4 flex items-center">
+                            <i class="fa fa-shopping-cart mr-2 text-blue-600"></i> DETAIL ORDER
+                        </h3>
+                        
                         <div class="space-y-3 mb-6">
-                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Konfigurasi</label>
                             <select id="select-room" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200"></select>
                             <select id="select-staff" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200"></select>
-                            <input type="text" id="note" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200" placeholder="No. Meja / Nama">
+                            <input type="text" id="note" class="w-full p-3 bg-gray-50 rounded-xl border-none text-sm font-bold outline-none ring-1 ring-gray-200" placeholder="Meja / Nama Tamu">
                         </div>
 
-                        <div id="selected-info" class="p-4 bg-blue-50 rounded-2xl hidden border border-blue-100 mb-6">
-                            <p class="text-[10px] text-blue-600 font-bold uppercase">Item:</p>
+                        <div id="selected-info" class="p-4 bg-blue-50 rounded-2xl hidden border border-blue-200 mb-6">
+                            <p class="text-[10px] text-blue-600 font-black uppercase tracking-tighter">Menu Terpilih:</p>
                             <p id="display-item" class="font-black text-slate-800 text-lg leading-tight"></p>
+                            <p id="display-price" class="text-blue-700 font-bold text-sm mt-1"></p>
                         </div>
 
-                        <button onclick="sendOrder()" id="btnSend" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest">
-                            Kirim Order & Print
+                        <button onclick="sendOrder()" id="btnSend" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-blue-700 active:scale-95 transition-all uppercase">
+                            KIRIM & PRINT BILL
                         </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="page-dashboard" class="page-content hidden text-center py-20">
-            <i class="fa-solid fa-chart-pie text-6xl text-slate-200 mb-4"></i>
-            <h2 class="text-xl font-bold text-slate-400">Dashboard Statistik Segera Hadir</h2>
+        <div id="page-dashboard" class="page-content hidden py-10 text-center">
+            <h2 class="text-xl font-bold text-slate-400">Riwayat Pesanan Segera Hadir</h2>
         </div>
     </main>
 
@@ -128,14 +126,14 @@
 
         let allProducts = [];
         let selectedOutlet = null;
-        let currentOrder = { product: null };
+        let currentOrderProduct = null;
+        let currentCategory = 'All';
 
         async function init() {
             const { data: outlets } = await _supabase.from('outlets').select('*');
-            const listDiv = document.getElementById('outlet-list-btns');
-            listDiv.innerHTML = outlets.map(o => `
-                <button onclick="chooseOutlet('${o.id}', '${o.name}')" class="w-full p-5 bg-slate-800 hover:bg-blue-600 text-white rounded-2xl font-black flex justify-between items-center transition-all group">
-                    ${o.name} <i class="fa-solid fa-chevron-right text-slate-600 group-hover:text-white"></i>
+            document.getElementById('outlet-list-btns').innerHTML = outlets.map(o => `
+                <button onclick="chooseOutlet('${o.id}', '${o.name}')" class="w-full p-5 bg-slate-800 hover:bg-blue-600 text-white rounded-2xl font-black flex justify-between items-center transition-all">
+                    ${o.name} <i class="fa fa-chevron-right"></i>
                 </button>
             `).join('');
         }
@@ -151,55 +149,67 @@
                 _supabase.from('products').select('*')
             ]);
 
-            allProducts = p.data;
+            allProducts = p.data || [];
             document.getElementById('select-room').innerHTML = '<option value="">-- Pilih Room --</option>' + r.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
             document.getElementById('select-staff').innerHTML = '<option value="">-- Pilih Staff --</option>' + s.data.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
 
-            const cats = ['All', ...new Set(p.data.map(i => i.category))];
-            document.getElementById('category-filters').innerHTML = cats.map(c => `<button onclick="filterItems('${c}', this)" class="category-btn px-5 py-2 rounded-xl bg-white border text-xs font-bold hover:bg-slate-50 transition whitespace-nowrap">${c}</button>`).join('');
+            const cats = ['All', ...new Set(allProducts.map(i => i.category))];
+            document.getElementById('category-filters').innerHTML = cats.map(c => `
+                <button onclick="filterByCategory('${c}', this)" class="category-btn px-5 py-2 rounded-xl border font-bold text-xs whitespace-nowrap transition-all ${c==='All'?'bg-blue-600 text-white':'bg-white text-gray-600'}">
+                    ${c}
+                </button>
+            `).join('');
 
             renderProducts(allProducts);
         }
 
         function renderProducts(items) {
             const grid = document.getElementById('product-grid');
+            if (items.length === 0) {
+                grid.innerHTML = '<p class="col-span-full text-center py-10 text-gray-400 font-bold">Produk tidak ditemukan...</p>';
+                return;
+            }
             grid.innerHTML = items.map(i => `
-                <div onclick="selectProduct('${i.id}', '${i.name}', ${i.price}, this)" class="bg-white p-5 rounded-3xl border-2 border-transparent shadow-sm hover:border-blue-400 cursor-pointer transition-all group active:scale-95">
-                    <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-blue-600 mb-4 group-hover:bg-blue-600 group-hover:text-white transition">
-                        <i class="fa-solid fa-bowl-food"></i>
+                <div onclick="selectProduct('${i.id}', '${i.name}', ${i.price}, this)" class="bg-white p-5 rounded-3xl border-2 border-transparent shadow-sm hover:border-blue-400 cursor-pointer transition-all active:scale-95 group">
+                    <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-3 group-hover:bg-blue-600 group-hover:text-white transition">
+                        <i class="fa-solid fa-mug-hot"></i>
                     </div>
-                    <p class="font-black text-slate-800 text-sm leading-tight h-10 overflow-hidden">${i.name}</p>
-                    <p class="text-blue-600 font-black text-xs mt-2 uppercase italic">Rp ${i.price.toLocaleString()}</p>
+                    <p class="font-black text-slate-800 text-sm leading-tight h-10 overflow-hidden uppercase">${i.name}</p>
+                    <p class="text-blue-600 font-black text-xs mt-2 italic">Rp ${i.price.toLocaleString()}</p>
                 </div>
             `).join('');
         }
 
-        function filterItems(cat, el) {
-            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('bg-blue-600', 'text-white'));
-            if(el) el.classList.add('bg-blue-600', 'text-white');
-            const filtered = cat === 'All' ? allProducts : allProducts.filter(i => i.category === cat);
+        // FILTER PENCARIAN (SEARCH)
+        function filterBySearch() {
+            const keyword = document.getElementById('search-input').value.toLowerCase();
+            const filtered = allProducts.filter(p => 
+                p.name.toLowerCase().includes(keyword) && 
+                (currentCategory === 'All' || p.category === currentCategory)
+            );
             renderProducts(filtered);
+        }
+
+        // FILTER KATEGORI
+        function filterByCategory(cat, el) {
+            currentCategory = cat;
+            document.querySelectorAll('.category-btn').forEach(b => {
+                b.classList.remove('bg-blue-600', 'text-white');
+                b.classList.add('bg-white', 'text-gray-600');
+            });
+            el.classList.replace('bg-white', 'bg-blue-600');
+            el.classList.replace('text-gray-600', 'text-white');
+            filterBySearch(); // Panggil search agar filter dobel (kategori + keyword)
         }
 
         function selectProduct(id, name, price, el) {
             document.querySelectorAll('#product-grid div').forEach(d => d.classList.remove('selected-card'));
             el.classList.add('selected-card');
-            currentOrder.product = { id, name, price };
+            currentOrderProduct = { id, name, price };
+            
             document.getElementById('selected-info').classList.remove('hidden');
             document.getElementById('display-item').innerText = name;
-        }
-
-        // FUNGSI PRINT TICKET
-        function printTicket(roomName, staffName, note) {
-            document.getElementById('p-outlet-title').innerText = selectedOutlet.name.toUpperCase();
-            document.getElementById('p-date').innerText = new Date().toLocaleString('id-ID');
-            document.getElementById('p-room').innerText = roomName;
-            document.getElementById('p-staff').innerText = staffName;
-            document.getElementById('p-note').innerText = note || '-';
-            document.getElementById('p-product').innerText = currentOrder.product.name;
-            document.getElementById('p-price').innerText = currentOrder.product.price.toLocaleString('id-ID');
-
-            window.print();
+            document.getElementById('display-price').innerText = "Rp " + price.toLocaleString();
         }
 
         async function sendOrder() {
@@ -207,17 +217,16 @@
             const staffEl = document.getElementById('select-staff');
             const note = document.getElementById('note').value;
 
-            if(!roomEl.value || !staffEl.value || !currentOrder.product) return alert("⚠️ Mohon lengkapi pilihan Menu, Room, dan Staff!");
-
-            const roomName = roomEl.options[roomEl.selectedIndex].text;
-            const staffName = staffEl.options[staffEl.selectedIndex].text;
+            if(!roomEl.value || !staffEl.value || !currentOrderProduct) {
+                return alert("⚠️ Pilih Menu, Room, dan Staff dulu!");
+            }
 
             const btn = document.getElementById('btnSend');
-            btn.disabled = true; btn.innerText = "MENGIRIM & PRINT...";
+            btn.disabled = true; btn.innerText = "SEDANG MENGIRIM...";
 
             const { error } = await _supabase.from('orders').insert([{
-                product_name: currentOrder.product.name,
-                price: currentOrder.product.price,
+                product_name: currentOrderProduct.name,
+                price: currentOrderProduct.price,
                 room_id: roomEl.value,
                 staff_id: staffEl.value,
                 outlet_id: selectedOutlet.id,
@@ -226,25 +235,36 @@
             }]);
 
             if(!error) {
-                // EKSEKUSI PRINT
-                printTicket(roomName, staffName, note);
+                // ISI DATA BILL SEBELUM PRINT
+                document.getElementById('p-outlet-title').innerText = selectedOutlet.name.toUpperCase();
+                document.getElementById('p-date').innerText = new Date().toLocaleString();
+                document.getElementById('p-room').innerText = roomEl.options[roomEl.selectedIndex].text;
+                document.getElementById('p-staff').innerText = staffEl.options[staffEl.selectedIndex].text;
+                document.getElementById('p-note').innerText = note || '-';
+                document.getElementById('p-product').innerText = currentOrderProduct.name;
+                document.getElementById('p-price').innerText = currentOrderProduct.price.toLocaleString();
 
-                alert("✅ Berhasil! Pesanan " + selectedOutlet.name + " telah terkirim.");
+                // JALANKAN PRINT
+                window.print();
+
+                alert("✅ Berhasil dikirim & Print Bill!");
                 
-                // Reset Selection
-                currentOrder.product = null;
+                // Reset Pilihan Produk saja
+                currentOrderProduct = null;
                 document.getElementById('selected-info').classList.add('hidden');
                 document.querySelectorAll('.selected-card').forEach(c => c.classList.remove('selected-card'));
                 document.getElementById('note').value = "";
-            } else { alert(error.message); }
-            btn.disabled = false; btn.innerText = "KIRIM ORDER & PRINT";
+                document.getElementById('search-input').value = "";
+                filterBySearch();
+            } else {
+                alert("Error: " + error.message);
+            }
+            btn.disabled = false; btn.innerText = "KIRIM & PRINT BILL";
         }
 
         function showPage(page) {
             document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
-            document.querySelectorAll('nav a').forEach(a => a.classList.remove('active-menu'));
             document.getElementById(`page-${page}`).classList.remove('hidden');
-            document.getElementById(`menu-${page}`).classList.add('active-menu');
         }
 
         init();
