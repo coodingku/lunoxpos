@@ -284,6 +284,70 @@
             speakNow("Sistem Admin Lunox Aktif");
         }
 
+        async function loadReports() {
+    const start = document.getElementById('f-start').value;
+    const end = document.getElementById('f-end').value;
+    const out = document.getElementById('f-outlet').value;
+
+    // Mulai query ke tabel orders
+    let query = _supabase.from('orders').select('*, outlets(name)').order('created_at', { ascending: false });
+
+    // Filter Tanggal jika diisi
+    if (start) query = query.gte('created_at', start + 'T00:00:00');
+    if (end) query = query.lte('created_at', end + 'T23:59:59');
+
+    const { data, error } = await query;
+
+    if (error) {
+        console.error("Gagal memuat laporan:", error);
+        return;
+    }
+
+    let filtered = data;
+    // Filter Outlet secara manual jika bukan "all"
+    if (out !== 'all') {
+        filtered = data.filter(o => o.outlets?.name === out);
+    }
+
+    const tbody = document.getElementById('report-body');
+    tbody.innerHTML = filtered.map(o => `
+        <tr class="border-b border-slate-700 hover:bg-slate-900/50">
+            <td class="p-4 text-[10px] text-slate-400">${new Date(o.created_at).toLocaleString('id-ID')}</td>
+            <td class="p-4 font-black text-orange-400 uppercase text-[10px]">${o.outlets?.name || '-'}</td>
+            <td class="p-4 text-white font-bold uppercase">${o.product_name}</td>
+            <td class="p-4 text-center font-black text-yellow-500">${o.qty || 1}</td>
+            <td class="p-4 font-black text-blue-400">Rp ${(o.price * (o.qty || 1)).toLocaleString()}</td>
+            <td class="p-4 text-center no-print">
+                <button onclick="printOrder('${o.id}')" class="text-white bg-slate-700 p-2 rounded-lg hover:bg-blue-600 transition">
+                    <i class="fa fa-print"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+        async function printOrder(id) {
+    const { data } = await _supabase.from('orders').select('*, outlets(name)').eq('id', id).single();
+    if (!data) return;
+    
+    const win = window.open('', '', 'width=300,height=450');
+    win.document.write(`
+        <div style="font-family:monospace; text-align:center; padding:10px;">
+            <h3>LUNOX RECEIPT</h3>
+            <p>${data.outlets.name}<br>${new Date(data.created_at).toLocaleString()}</p>
+            <hr>
+            <div style="text-align:left;">
+                <p>${data.product_name} x${data.qty || 1}</p>
+                <p>TOTAL: Rp ${(data.price * (data.qty || 1)).toLocaleString()}</p>
+            </div>
+            <hr>
+            <p>Terima Kasih</p>
+        </div>
+    `);
+    win.print();
+    win.close();
+}
+
         async function completeOrder(id) {
             await _supabase.from('orders').update({ status: 'completed' }).eq('id', id);
             document.getElementById(`order-${id}`)?.remove();
