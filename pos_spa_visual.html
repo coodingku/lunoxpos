@@ -405,37 +405,59 @@
     return { sub, discountAmount, serviceAmount, ppnAmount, grandTotal };
 }
         
-        async function processCheckout() {
-            const totals = await calculateTotal();
-            const pay = document.getElementById('db-payment-method').value;
-            const outlet = document.getElementById('active-outlet').value;
+  async function processCheckout() {
+    const totals = await calculateTotal();
+    const pay = document.getElementById('db-payment-method').value;
+    const outlet = document.getElementById('active-outlet').value;
 
-            // Simpan Transaksi
-            await _supabase.from('transaksi_spa').update({ 
-                status_bayar: 'completed', 
-                total_bayar: totals.grandTotal, 
-                payment_method: pay, 
-                checkout_at: new Date() 
-            }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
+    // 1. Ambil data room terbaru dari database untuk mendapatkan therapist_id yang benar
+    const { data: latestRoomData } = await _supabase
+        .from('rooms')
+        .select('therapist_id')
+        .eq('id', currentRoom.id)
+        .single();
 
-            // Bebaskan Room & Therapist
-            await _supabase.from('rooms').update({ status: 'available', therapist_id: null, end_time: null }).eq('id', currentRoom.id);
-            if(currentRoom.therapist_id) {
-                await _supabase.from('therapists').update({ status: 'standby', end_time: null }).eq('t_id', currentRoom.therapist_id);
-            }
+    const actualTherapistId = latestRoomData ? latestRoomData.therapist_id : null;
 
-            // Update Struk
-            document.getElementById('r-outlet').innerText = outlet;
-            document.getElementById('r-date').innerText = new Date().toLocaleString('id-ID');
-            document.getElementById('r-items-list').innerHTML = activeOrders.map(i => `
-                <div class="flex justify-between"><span>${i.nama_item} x${i.qty}</span><span>${(i.harga_satuan*i.qty).toLocaleString()}</span></div>`).join('');
-            document.getElementById('r-subtotal').innerText = totals.sub.toLocaleString();
-            document.getElementById('r-tax').innerText = (totals.serviceAmount + totals.ppnAmount).toLocaleString();
-            document.getElementById('r-total').innerText = totals.grandTotal.toLocaleString();
+    // 2. Simpan Transaksi
+    await _supabase.from('transaksi_spa').update({ 
+        status_bayar: 'completed', 
+        total_bayar: totals.grandTotal, 
+        payment_method: pay, 
+        checkout_at: new Date() 
+    }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
 
-            window.print();
-            closePaymentModal(); closeModal(); init();
-        }
+    // 3. Bebaskan Room
+    await _supabase.from('rooms').update({ 
+        status: 'available', 
+        therapist_id: null, 
+        end_time: null 
+    }).eq('id', currentRoom.id);
+
+    // 4. Bebaskan Therapist (Menggunakan ID yang baru saja diambil dari DB)
+    if (actualTherapistId) {
+        await _supabase.from('therapists')
+            .update({ status: 'standby', end_time: null })
+            .eq('t_id', actualTherapistId);
+        
+        console.log("Therapist " + actualTherapistId + " set to standby.");
+    }
+
+    // 5. Update Tampilan Struk
+    document.getElementById('r-outlet').innerText = outlet;
+    document.getElementById('r-date').innerText = new Date().toLocaleString('id-ID');
+    document.getElementById('r-items-list').innerHTML = activeOrders.map(i => `
+        <div class="flex justify-between"><span>${i.nama_item} x${i.qty}</span><span>${(i.harga_satuan*i.qty).toLocaleString()}</span></div>`).join('');
+    document.getElementById('r-subtotal').innerText = totals.sub.toLocaleString();
+    document.getElementById('r-tax').innerText = (totals.serviceAmount + totals.ppnAmount).toLocaleString();
+    document.getElementById('r-total').innerText = totals.grandTotal.toLocaleString();
+
+    // 6. Cetak dan Selesai
+    window.print();
+    closePaymentModal(); 
+    closeModal(); 
+    init(); // Memicu loadRoomMap() untuk memperbarui tampilan grid
+}
 
         // --- ABSENSI ---
         function openAttendanceModal() { document.getElementById('modal-attendance').classList.remove('hidden'); document.getElementById('staff-id-input').focus(); }
