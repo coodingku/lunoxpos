@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUNOX ADMIN - MASTER DASHBOARD</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        .sidebar-link.active { background: #2563eb; color: white; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4); }
+        .content-frame { height: calc(100vh - 40px); border-radius: 2rem; }
+    </style>
+</head>
+<body class="overflow-hidden">
+
+    <div class="flex h-screen p-4 gap-4">
+        
+        <aside class="w-72 bg-slate-900 rounded-[2.5rem] flex flex-col p-6 shadow-2xl transition-all">
+            <div class="px-4 py-8">
+                <h1 class="text-2xl font-black italic tracking-tighter text-white">LUNOX <span class="text-blue-500">ADMIN</span></h1>
+                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1">Management System v3.0</p>
+            </div>
+
+            <nav class="flex-1 space-y-2 mt-4">
+                <button onclick="loadPage('pos_spa_visual.html', this)" class="sidebar-link active w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-400 font-bold text-sm transition-all hover:text-white">
+                    <i class="fa fa-cash-register w-5"></i>
+                    <span>Cashier POS</span>
+                </button>
+
+                <button onclick="loadPage('spa-control.html', this)" class="sidebar-link w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-400 font-bold text-sm transition-all hover:text-white">
+                    <i class="fa fa-tv w-5"></i>
+                    <span>SPA Control</span>
+                </button>
+
+                <div class="pt-6 pb-2 px-5 text-[10px] font-black text-slate-600 uppercase tracking-widest">Master Data</div>
+
+                <button onclick="loadPage('therapist-manager.html', this)" class="sidebar-link w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-400 font-bold text-sm transition-all hover:text-white">
+                    <i class="fa fa-user-tie w-5"></i>
+                    <span>Input Staff</span>
+                </button>
+
+                <button onclick="loadPage('inventory.html', this)" class="sidebar-link w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-400 font-bold text-sm transition-all hover:text-white">
+                    <i class="fa fa-boxes-stacked w-5"></i>
+                    <span>Produk & Stok</span>
+                </button>
+
+                <button onclick="loadPage('room-config.html', this)" class="sidebar-link w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-400 font-bold text-sm transition-all hover:text-white">
+                    <i class="fa fa-door-open w-5"></i>
+                    <span>Atur Room</span>
+                </button>
+
+                <div class="pt-6 pb-2 px-5 text-[10px] font-black text-slate-600 uppercase tracking-widest">Reports</div>
+
+                <button onclick="loadPage('reports.html', this)" class="sidebar-link w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-400 font-bold text-sm transition-all hover:text-white">
+                    <i class="fa fa-chart-line w-5"></i>
+                    <span>Laporan Harian</span>
+                </button>
+            </nav>
+
+            <div class="mt-auto bg-slate-800/50 p-5 rounded-[2rem] flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center font-black text-white italic">A</div>
+                <div class="flex-1 overflow-hidden">
+                    <p class="text-xs font-bold text-white truncate">Administrator</p>
+                    <p class="text-[9px] text-slate-500 font-bold uppercase">Main Outlet</p>
+                </div>
+                <button class="text-slate-500 hover:text-red-400 transition-colors">
+                    <i class="fa fa-power-off"></i>
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col">
+            <div class="flex justify-between items-center mb-4 px-4 pt-2">
+                <div class="flex items-center gap-4">
+                    <div id="page-indicator" class="bg-white px-6 py-2 rounded-full border shadow-sm flex items-center gap-3 text-xs font-black uppercase text-slate-700">
+                        <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                        <span id="current-page-name">Cashier POS</span>
+                    </div>
+                    <div id="status-badge" class="bg-emerald-100 text-emerald-600 px-4 py-2 rounded-full text-[10px] font-black uppercase shadow-sm">
+                        System Online
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-6">
+                    <div class="text-right">
+                        <div id="live-clock" class="text-sm font-black text-slate-800 tracking-tighter">00:00:00</div>
+                        <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">WITA - Bali</div>
+                    </div>
+                    <button class="w-10 h-10 bg-white rounded-xl border flex items-center justify-center text-slate-400 hover:text-blue-500 shadow-sm transition-all">
+                        <i class="fa fa-bell"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-1 bg-white rounded-[2.5rem] shadow-sm border overflow-hidden relative">
+                <iframe id="main-frame" src="pos_spa_visual.html" class="w-full h-full border-none"></iframe>
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        function loadPage(url, btn) {
+            // Update Iframe
+            const frame = document.getElementById('main-frame');
+            frame.src = url;
+
+            // Update Active Sidebar Style
+            document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Update Page Indicator
+            const pageName = btn.querySelector('span').innerText;
+            document.getElementById('current-page-name').innerText = pageName;
+
+            // Optional: Close menu on mobile if needed
+        }
+
+        // Live Clock
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('live-clock').innerText = now.toLocaleTimeString('id-ID', { hour12: false });
+        }, 1000);
+
+        // Handle possible iframe load error (if file not found)
+        document.getElementById('main-frame').onerror = function() {
+            alert("Halaman belum tersedia atau nama file salah.");
+        };
+    </script>
+</body>
+</html>
