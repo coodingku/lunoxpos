@@ -323,27 +323,42 @@
         }
 
         // Logic Attendance, Timer, dll (Tetap sama dengan sebelumnya)
-        async function processAbsensi() {
-            const staffId = document.getElementById('staff-id-input').value;
-            if (!staffId) return;
-            const { data: staff } = await _supabase.from('therapists').select('*').eq('t_id', staffId).single();
-            if (staff) { playVoice(`Selamat bekerja ${staff.name}`); alert(`Absensi Berhasil: ${staff.name}`); closeAttendanceModal(); }
-            else { playVoice("ID Staff tidak dikenal."); alert("ID Staff tidak ditemukan!"); }
-        }
+       async function processAbsensi() {
+    const staffId = document.getElementById('staff-id-input').value;
+    if (!staffId) return;
 
-        function playVoice(text) { const msg = new SpeechSynthesisUtterance(text); msg.lang = 'id-ID'; window.speechSynthesis.speak(msg); }
-        function closeModal() { document.getElementById('pos-modal').classList.add('hidden'); }
-        function closePicker() { document.getElementById('picker-modal').classList.add('hidden'); }
-        function openPaymentModal() { if(activeOrders.length === 0) return alert("Bill kosong!"); document.getElementById('payment-modal').classList.remove('hidden'); calculateTotal(); }
-        function closePaymentModal() { document.getElementById('payment-modal').classList.add('hidden'); }
-        function openAttendanceModal() { document.getElementById('modal-attendance').classList.remove('hidden'); document.getElementById('staff-id-input').focus(); }
-        function closeAttendanceModal() { document.getElementById('modal-attendance').classList.add('hidden'); document.getElementById('staff-id-input').value = ''; }
-        function filterPicker() {
-            const val = document.getElementById('picker-search').value.toLowerCase();
-            const rows = document.querySelectorAll('#picker-table-body tr');
-            rows.forEach(r => r.style.display = r.innerText.toLowerCase().includes(val) ? '' : 'none');
-        }
+    // 1. Cek apakah staff ada
+    const { data: staff, error } = await _supabase
+        .from('therapists')
+        .select('*')
+        .eq('t_id', staffId)
+        .single();
 
+    if (error || !staff) {
+        playVoice("ID Staff tidak dikenal.");
+        alert("ID Staff tidak ditemukan!");
+    } else {
+        // 2. UPDATE STATUS KE STANDBY agar muncul di Spa Control
+        const { error: updateError } = await _supabase
+            .from('therapists')
+            .update({ 
+                status: 'standby',
+                last_absent: new Date() // Opsional: catat jam absen terakhir
+            })
+            .eq('t_id', staffId);
+
+        if (!updateError) {
+            playVoice(`Selamat bekerja ${staff.name}`);
+            alert(`Absensi Berhasil: ${staff.name} sekarang STANDBY.`);
+            closeAttendanceModal();
+            
+            // Refresh master data lokal agar picker juga terupdate
+            loadMasterData(); 
+        } else {
+            alert("Gagal update status: " + updateError.message);
+        }
+    }
+}
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('id-ID'); }, 1000);
         init();
     </script>
