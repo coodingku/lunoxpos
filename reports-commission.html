@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUNOX - Commission Reports</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f1f5f9; }
+        .card-shadow { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02); }
+    </style>
+</head>
+<body class="p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+            <div>
+                <h1 class="text-3xl font-black italic tracking-tighter text-slate-800 uppercase">Payroll <span class="text-blue-600">& Commission</span></h1>
+                <p class="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Laporan Bagi Hasil Staff & Therapist</p>
+            </div>
+            
+            <div class="flex gap-3 bg-white p-2 rounded-[2rem] shadow-sm border">
+                <input type="date" id="date-start" class="bg-transparent px-4 py-2 text-xs font-bold outline-none">
+                <span class="flex items-center text-slate-300">-</span>
+                <input type="date" id="date-end" class="bg-transparent px-4 py-2 text-xs font-bold outline-none">
+                <button onclick="loadReport()" class="bg-blue-600 text-white px-6 py-2 rounded-full text-xs font-black uppercase hover:bg-black transition">Filter</button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="bg-white p-8 rounded-[2.5rem] card-shadow border border-slate-100">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Omzet (Nett)</p>
+                <h2 id="total-omzet" class="text-3xl font-black text-slate-800">Rp 0</h2>
+            </div>
+            <div class="bg-blue-600 p-8 rounded-[2.5rem] card-shadow text-white">
+                <p class="text-[10px] font-black opacity-60 uppercase tracking-widest mb-2">Total Komisi Staff</p>
+                <h2 id="total-komisi" class="text-3xl font-black">Rp 0</h2>
+            </div>
+            <div class="bg-slate-900 p-8 rounded-[2.5rem] card-shadow text-white">
+                <p class="text-[10px] font-black opacity-60 uppercase tracking-widest mb-2">Profit Bersih (Estimasi)</p>
+                <h2 id="total-profit" class="text-3xl font-black text-emerald-400">Rp 0</h2>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-[3rem] shadow-sm border border-slate-100 overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
+                        <th class="p-6">Staff / Therapist</th>
+                        <th class="p-6">Qty Service</th>
+                        <th class="p-6">Gaji Pokok</th>
+                        <th class="p-6">Total Komisi</th>
+                        <th class="p-6 bg-blue-50/50 text-blue-600">Total Take Home Pay</th>
+                    </tr>
+                </thead>
+                <tbody id="report-table" class="font-bold text-slate-700 text-sm">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        // Set default tanggal hari ini
+        document.getElementById('date-start').value = new Date().toISOString().split('T')[0];
+        document.getElementById('date-end').value = new Date().toISOString().split('T')[0];
+
+        async function loadReport() {
+            const start = document.getElementById('date-start').value + "T00:00:00";
+            const end = document.getElementById('date-end').value + "T23:59:59";
+            
+            // 1. Ambil Data Therapist
+            const { data: staff } = await _supabase.from('therapists').select('*');
+            
+            // 2. Ambil Data Transaksi Completed dalam range tanggal
+            const { data: trans } = await _supabase.from('transaksi_spa')
+                .select('*')
+                .eq('status_bayar', 'completed')
+                .gte('checkout_at', start)
+                .lte('checkout_at', end);
+
+            let summaryHtml = '';
+            let grandTotalOmzet = 0;
+            let grandTotalKomisi = 0;
+
+            staff.forEach(s => {
+                const myTrans = trans.filter(t => t.therapist_id === s.t_id);
+                let totalSvc = 0;
+                let totalCom = 0;
+
+                myTrans.forEach(t => {
+                    // Hitung Komisi per Item
+                    let itemCom = 0;
+                    if(t.commission_type === 'percentage') {
+                        itemCom = (t.harga_satuan * t.qty) * (t.commission_value / 100);
+                    } else {
+                        itemCom = t.commission_value * t.qty;
+                    }
+                    
+                    totalCom += itemCom;
+                    totalSvc += t.qty;
+                    grandTotalOmzet += (t.harga_satuan * t.qty);
+                });
+
+                grandTotalKomisi += totalCom;
+                const thp = (s.salary || 0) + totalCom;
+
+                summaryHtml += `
+                    <tr class="border-b hover:bg-slate-50 transition">
+                        <td class="p-6">
+                            <div class="flex flex-col">
+                                <span class="uppercase italic font-black text-slate-800">${s.name}</span>
+                                <span class="text-[10px] text-slate-400">ID: ${s.t_id} | ${s.outlet_name}</span>
+                            </div>
+                        </td>
+                        <td class="p-6 text-slate-400">${totalSvc} Items</td>
+                        <td class="p-6">Rp ${(s.salary || 0).toLocaleString()}</td>
+                        <td class="p-6 text-emerald-600">+ Rp ${totalCom.toLocaleString()}</td>
+                        <td class="p-6 bg-blue-50/30 text-blue-600 font-black text-lg">Rp ${thp.toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('report-table').innerHTML = summaryHtml || '<tr><td colspan="5" class="p-10 text-center opacity-50">Tidak ada data transaksi</td></tr>';
+            document.getElementById('total-omzet').innerText = `Rp ${grandTotalOmzet.toLocaleString()}`;
+            document.getElementById('total-komisi').innerText = `Rp ${grandTotalKomisi.toLocaleString()}`;
+            document.getElementById('total-profit').innerText = `Rp ${(grandTotalOmzet - grandTotalKomisi).toLocaleString()}`;
+        }
+
+        loadReport();
+    </script>
+</body>
+</html>
