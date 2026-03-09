@@ -262,34 +262,64 @@
             closeModal();
         }
 
-        async function checkout() {
-            if(!confirm("Proses Bayar & Cetak Struk?")) return;
-            
-            // 1. Siapkan Struk Visual
-            document.getElementById('rec-outlet-name').innerText = document.getElementById('active-outlet').value + " SPA";
-            document.getElementById('rec-date').innerText = new Date().toLocaleString('id-ID');
-            document.getElementById('rec-room-name').innerText = currentRoom.name;
-            
-            let totalBill = 0;
-            const itemHtml = activeOrders.map(item => {
-                const sub = item.harga_satuan * item.qty;
-                totalBill += sub;
-                return `<div class="flex justify-between"><span>${item.nama_item} (x${item.qty})</span><span>${sub.toLocaleString()}</span></div>`;
-            }).join('');
-            
-            document.getElementById('rec-items').innerHTML = itemHtml;
-            document.getElementById('rec-total').innerText = `Rp ${totalBill.toLocaleString()}`;
+     async function checkout() {
+    if(!currentRoom || !currentRoom.id) return alert("Data Room tidak valid!");
+    if(!confirm("Proses Bayar & Cetak Struk?")) return;
+    
+    try {
+        // 1. Ambil data bill terbaru sebelum dihapus (untuk struk)
+        const { data: billData } = await _supabase
+            .from('transaksi_spa')
+            .select('*')
+            .eq('room_id', currentRoom.id)
+            .eq('status_bayar', 'pending');
 
-            // 2. Database Update
-            await _supabase.from('transaksi_spa').update({ status_bayar: 'completed' }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
-            if(currentRoom.therapist_id) await _supabase.from('therapists').update({ status: 'standby', end_time: null }).eq('t_id', currentRoom.therapist_id);
-            await _supabase.from('rooms').update({ status: 'available', therapist_id: null, start_time: null, end_time: null }).eq('id', currentRoom.id);
-            
-            // 3. Print & Reset
-            window.print();
-            closeModal();
-            loadRoomMap();
+        if (!billData || billData.length === 0) {
+            alert("Tidak ada tagihan pending di room ini.");
+            return;
         }
+
+        // 2. Siapkan Tampilan Struk
+        document.getElementById('rec-outlet-name').innerText = document.getElementById('active-outlet').value + " SPA";
+        document.getElementById('rec-date').innerText = new Date().toLocaleString('id-ID');
+        document.getElementById('rec-room-name').innerText = currentRoom.name;
+        
+        let totalBill = 0;
+        const itemHtml = billData.map(item => {
+            const sub = item.harga_satuan * item.qty;
+            totalBill += sub;
+            return `<div class="flex justify-between"><span>${item.nama_item} (x${item.qty})</span><span>${sub.toLocaleString()}</span></div>`;
+        }).join('');
+        
+        document.getElementById('rec-items').innerHTML = itemHtml;
+        document.getElementById('rec-total').innerText = `Rp ${totalBill.toLocaleString()}`;
+
+        // 3. Update Database (Gunakan try-catch untuk menangkap error 400)
+        const updateOrder = await _supabase.from('transaksi_spa').update({ status_bayar: 'completed' }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
+        
+        if(currentRoom.therapist_id) {
+            await _supabase.from('therapists').update({ status: 'standby', end_time: null }).eq('t_id', currentRoom.therapist_id);
+        }
+
+        const updateRoom = await _supabase.from('rooms').update({ 
+            status: 'available', 
+            therapist_id: null, 
+            start_time: null, 
+            end_time: null 
+        }).eq('id', currentRoom.id);
+
+        if (updateRoom.error) throw updateRoom.error;
+
+        // 4. Print & Reset
+        window.print();
+        closeModal();
+        loadRoomMap();
+
+    } catch (err) {
+        console.error("Detail Error:", err);
+        alert("Terjadi kesalahan komunikasi dengan database (Error 400). Pastikan ID Room benar.");
+    }
+}
 
         function closeModal() { document.getElementById('pos-modal').classList.add('hidden'); }
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('id-ID'); }, 1000);
