@@ -191,35 +191,42 @@
         }
 
         // ADD FNB TO BILL
-        async function addToBill() {
-            if(!currentRoom) return;
-            const p = document.getElementById('input-product');
-            const opt = p.options[p.selectedIndex];
-            const qty = parseInt(document.getElementById('input-qty').value);
+       // Fungsi Tambah FnB yang lebih aman
+async function addToBill() {
+    if(!currentRoom) return alert("Pilih Room terlebih dahulu!");
+    
+    const p = document.getElementById('input-product');
+    const opt = p.options[p.selectedIndex];
+    const qty = parseInt(document.getElementById('input-qty').value);
 
-            const { error } = await _supabase.from('orders').insert([{
-                room_id: currentRoom.id,
-                product_name: opt.dataset.name,
-                price: parseInt(opt.dataset.price),
-                qty: qty,
-                status: 'pending',
-                outlet_name: document.getElementById('active-outlet').value
-            }]);
+    // Persiapkan data pesanan
+    const orderData = {
+        room_id: currentRoom.id, // Pastikan ID Room dikirim
+        product_name: opt.dataset.name,
+        price: parseInt(opt.dataset.price),
+        qty: qty,
+        status: 'pending',
+        outlet_name: document.getElementById('active-outlet').value
+    };
 
-            if(!error) {
-                // If room was available, make it occupied
-                if(currentRoom.status === 'available') {
-                    await _supabase.from('rooms').update({ status: 'occupied' }).eq('id', currentRoom.id);
-                    currentRoom.status = 'occupied';
-                    document.getElementById('form-massage').classList.add('hidden');
-                    document.getElementById('btn-checkout').disabled = false;
-                }
-                fetchActiveBill(currentRoom.id);
-            } else {
-                alert("Database Error: Periksa kolom room_id di tabel orders!");
-            }
+    console.log("Mengirim data pesanan:", orderData);
+
+    const { data, error } = await _supabase.from('orders').insert([orderData]).select();
+
+    if(error) {
+        console.error("Detail Error Supabase:", error);
+        alert("Gagal Simpan: " + error.message);
+    } else {
+        // Jika room tadi available, ubah ke occupied karena sudah ada pesanan masuk
+        if(currentRoom.status === 'available') {
+            await _supabase.from('rooms').update({ status: 'occupied' }).eq('id', currentRoom.id);
+            currentRoom.status = 'occupied';
+            document.getElementById('form-massage').classList.add('hidden');
+            document.getElementById('btn-checkout').disabled = false;
         }
-
+        fetchActiveBill(currentRoom.id);
+    }
+}
         // START MASSAGE SESSION
         async function startSession() {
             const tid = document.getElementById('input-therapist').value;
