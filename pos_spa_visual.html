@@ -332,14 +332,35 @@
         }
         function closePaymentModal() { document.getElementById('payment-modal').classList.add('hidden'); }
 
-        function calculateTotal() {
-            const sub = activeOrders.reduce((a, b) => a + (b.harga_satuan * b.qty), 0);
-            const disc = parseFloat(document.getElementById('db-discount').value) || 0;
-            const grand = sub - (sub * disc / 100);
-            document.getElementById('p-subtotal').innerText = `Rp ${sub.toLocaleString()}`;
-            document.getElementById('p-grand-total').innerText = `Rp ${grand.toLocaleString()}`;
-            return { sub, grand };
-        }
+     // Ganti fungsi calculateTotal lama dengan ini di file pos_spa_visual.html
+async function calculateTotal() {
+    const sub = activeOrders.reduce((a, b) => a + (b.harga_satuan * b.qty), 0);
+    const discPercent = parseFloat(document.getElementById('db-discount').value) || 0;
+    
+    // Ambil setting pajak (bisa hardcode atau ambil dari db)
+    const ppnPercent = 11; // Ambil dari input di inventory.html jika ingin dinamis
+    const servicePercent = 5;
+
+    const discountAmount = sub * (discPercent / 100);
+    const afterDiscount = sub - discountAmount;
+    
+    const serviceAmount = afterDiscount * (servicePercent / 100);
+    const ppnAmount = (afterDiscount + serviceAmount) * (ppnPercent / 100);
+    
+    const grandTotal = afterDiscount + serviceAmount + ppnAmount;
+
+    // Tampilkan di UI Payment Modal
+    document.getElementById('p-subtotal').innerText = `Rp ${sub.toLocaleString()}`;
+    document.getElementById('p-grand-total').innerText = `Rp ${Math.round(grandTotal).toLocaleString()}`;
+    
+    return { 
+        sub: sub, 
+        discount: discountAmount, 
+        service: serviceAmount, 
+        ppn: ppnAmount, 
+        grand: Math.round(grandTotal) 
+    };
+}
 
         async function processCheckout() {
             const calc = calculateTotal();
