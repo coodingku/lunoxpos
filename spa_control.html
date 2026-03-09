@@ -3,49 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUNOX SPA - THERAPIST CONTROL V2</title>
+    <title>LUNOX SPA - MONITORING PUSAT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
 
-        /* Status Colors */
-        .status-offline { background: #0f172a; border-color: #1e293b; opacity: 0.4; } 
+        /* Status Styling */
         .status-standby { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); border-color: #3b82f6; } 
-        .status-checkin { background: linear-gradient(135deg, #065f46 0%, #064e3b 100%); border-color: #10b981; } 
         .status-progress { background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%); border-color: #ef4444; } 
         
         /* Pulse for Active Treatment */
         .status-progress { animation: pulse-red 3s infinite; }
         @keyframes pulse-red {
             0% { box-shadow: 0 0 0 0px rgba(239, 68, 68, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
             100% { box-shadow: 0 0 0 0px rgba(239, 68, 68, 0); }
         }
 
+        /* Warning Mode (Less than 10 mins) */
         .warning-mode { animation: blink-warning 0.8s infinite; background: #b45309 !important; border-color: #f59e0b !important; }
-        @keyframes blink-warning { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        @keyframes blink-warning { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
         
         .floor-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 1.2rem;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1.5rem;
         }
+
+        .card-shadow { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
     </style>
 </head>
 <body class="bg-[#020617] text-slate-100 min-h-screen">
 
-    <header class="bg-slate-900/50 backdrop-blur-md p-5 border-b border-slate-800 sticky top-0 z-50 shadow-2xl">
+    <header class="bg-slate-900/80 backdrop-blur-xl p-6 border-b border-slate-800 sticky top-0 z-50 shadow-2xl">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-2xl font-black italic tracking-tighter text-blue-500">SPA <span class="text-white">CONTROL</span></h1>
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Therapist Real-time Monitoring</p>
+                <h1 class="text-3xl font-black italic tracking-tighter text-blue-500">LUNOX <span class="text-white">CONTROL</span></h1>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Live Monitoring System</p>
+                </div>
             </div>
-            <div class="flex items-center gap-3">
-                <select id="active-outlet" onchange="fetchTherapists()" class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-xs font-black outline-none text-blue-400">
+            <div class="flex items-center gap-4">
+                <div class="text-right hidden md:block">
+                    <p id="live-clock" class="text-xl font-black font-mono">00:00:00</p>
+                    <p class="text-[9px] text-slate-500 font-bold uppercase">Real-time Server Time</p>
+                </div>
+                <select id="active-outlet" onchange="fetchTherapists()" class="bg-slate-800 border-2 border-slate-700 rounded-2xl px-5 py-3 text-sm font-black outline-none text-blue-400 focus:border-blue-500 transition-all">
                     <option value="Delta">DELTA SPA</option>
                     <option value="Cabana">CABANA SPA</option>
                 </select>
@@ -53,9 +61,29 @@
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto p-6">
+    <main class="max-w-7xl mx-auto p-8">
+        <div class="flex gap-6 mb-10 overflow-x-auto pb-4">
+            <div class="bg-slate-900/50 border border-slate-800 p-4 rounded-3xl min-w-[150px]">
+                <p class="text-[10px] font-black text-slate-500 uppercase mb-1">Total Active</p>
+                <p id="stat-total" class="text-2xl font-black">0</p>
+            </div>
+            <div class="bg-blue-900/20 border border-blue-800/50 p-4 rounded-3xl min-w-[150px]">
+                <p class="text-[10px] font-black text-blue-400 uppercase mb-1">Standby</p>
+                <p id="stat-standby" class="text-2xl font-black text-blue-400">0</p>
+            </div>
+            <div class="bg-red-900/20 border border-red-800/50 p-4 rounded-3xl min-w-[150px]">
+                <p class="text-[10px] font-black text-red-400 uppercase mb-1">On Service</p>
+                <p id="stat-progress" class="text-2xl font-black text-red-400">0</p>
+            </div>
+        </div>
+
         <div id="therapist-grid" class="floor-grid">
             </div>
+
+        <div id="empty-state" class="hidden flex flex-col items-center justify-center py-20 opacity-20">
+            <i class="fa fa-user-slash text-6xl mb-4"></i>
+            <p class="font-bold uppercase tracking-widest">Tidak ada terapis yang absen standby</p>
+        </div>
     </main>
 
     <script>
@@ -65,22 +93,33 @@
 
         let therapists = [];
 
-        // 1. Fungsi Utama Mengambil Data
+        // 1. Ambil Data (Hanya yang TIDAK OFF/OFFLINE)
         async function fetchTherapists() {
             const outlet = document.getElementById('active-outlet').value;
             const { data, error } = await _supabase
                 .from('therapists')
                 .select('*')
                 .eq('outlet_name', outlet)
+                .neq('status', 'offline') // Logika: Jika tidak absen masuk, tidak tampil
                 .order('t_id', { ascending: true });
 
             if (data) {
                 therapists = data;
+                updateStats();
                 renderFloorMap();
             }
         }
 
-        // 2. Fungsi Render UI
+        // 2. Update Statistik Atas
+        function updateStats() {
+            document.getElementById('stat-total').innerText = therapists.length;
+            document.getElementById('stat-standby').innerText = therapists.filter(t => t.status === 'standby').length;
+            document.getElementById('stat-progress').innerText = therapists.filter(t => t.status === 'progress').length;
+            
+            document.getElementById('empty-state').classList.toggle('hidden', therapists.length > 0);
+        }
+
+        // 3. Render Kartu Terapis
         function renderFloorMap() {
             const grid = document.getElementById('therapist-grid');
             grid.innerHTML = '';
@@ -97,18 +136,18 @@
                         const mins = Math.floor(diff / 60000);
                         const secs = Math.floor((diff % 60000) / 1000);
                         timerDisplay = `${mins}:${secs < 10 ? '0'+secs : secs}`;
-                        if (mins < 10) isWarning = true;
+                        if (mins < 10) isWarning = true; // Berkedip jika sisa < 10 menit
                     } else {
                         timerDisplay = "SELESAI";
                     }
                 }
 
                 const card = document.createElement('div');
-                card.className = `status-${t.status} ${isWarning ? 'warning-mode' : ''} p-5 rounded-[2rem] border-b-4 shadow-xl text-center transition-all duration-500`;
+                card.className = `status-${t.status} ${isWarning ? 'warning-mode' : ''} p-6 rounded-[2.5rem] border-b-8 card-shadow text-center transition-all duration-700 hover:scale-105`;
                 card.innerHTML = `
-                    <p class="text-[9px] font-black opacity-40 uppercase mb-1">${t.t_id}</p>
-                    <h3 class="font-extrabold text-sm uppercase truncate">${t.name}</h3>
-                    <div class="mt-4 py-2 px-3 bg-black/30 rounded-2xl text-[12px] font-black font-mono">
+                    <p class="text-[10px] font-black opacity-30 uppercase mb-1 tracking-tighter">${t.t_id}</p>
+                    <h3 class="font-black text-base uppercase truncate mb-4">${t.name}</h3>
+                    <div class="py-3 px-2 bg-black/40 rounded-3xl text-[14px] font-black font-mono shadow-inner border border-white/5">
                         ${timerDisplay}
                     </div>
                 `;
@@ -116,24 +155,26 @@
             });
         }
 
-        // 3. SINKRONISASI OTOMATIS (Mendengarkan Perubahan dari POS)
+        // 4. Sinkronisasi Real-time (Merespons Absen & Checkout dari POS)
         _supabase
-            .channel('db-changes')
+            .channel('any-db-changes')
             .on('postgres_changes', { 
-                event: 'UPDATE', 
+                event: '*', // Listen Insert, Update, Delete
                 schema: 'public', 
                 table: 'therapists' 
             }, (payload) => {
-                // Begitu ada update di tabel therapists (misal dari POS), langsung ambil data terbaru
-                console.log("Update terdeteksi:", payload.new);
+                console.log("Real-time Sync:", payload.eventType);
                 fetchTherapists(); 
             })
             .subscribe();
 
-        // 4. Timer Lokal (Hanya untuk mengupdate detik di layar)
-        setInterval(renderFloorMap, 1000);
+        // 5. Loop Interval (Refresh detik timer)
+        setInterval(() => {
+            renderFloorMap();
+            document.getElementById('live-clock').innerText = new Date().toLocaleTimeString('id-ID');
+        }, 1000);
 
-        // Load awal
+        // Initial Load
         fetchTherapists();
     </script>
 </body>
