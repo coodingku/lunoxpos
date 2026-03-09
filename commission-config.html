@@ -78,36 +78,55 @@
         let currentTab = 'service';
         let currentEditingId = null;
 
-        async function loadData() {
-            const table = document.getElementById('commission-table');
-            table.innerHTML = '<tr><td colspan="5" class="p-10 text-center opacity-50">Memuat data...</td></tr>';
+     async function loadData() {
+    const table = document.getElementById('commission-table');
+    table.innerHTML = '<tr><td colspan="5" class="p-10 text-center opacity-50">Memuat data...</td></tr>';
 
-            // Logika: Jika tab service, ambil dari master_services. Jika product, dari produk.
-            const targetTable = (currentTab === 'service') ? 'services' : 'produk';
-            const { data, error } = await _supabase.from(targetTable).select('*').order('name');
+    // Penyesuaian Nama Tabel & Kolom
+    const isService = (currentTab === 'service');
+    const targetTable = isService ? 'services' : 'produk'; 
+    // ^ GANTI 'services' di atas jika nama tabel anda berbeda (misal: 'master_services')
+    
+    const nameColumn = isService ? 'name' : 'nama_produk'; 
+    // ^ GANTI sesuai kolom nama di tabel produk anda
 
-            if (data) {
-                table.innerHTML = data.map(item => `
-                    <tr class="border-b hover:bg-slate-50 transition">
-                        <td class="p-6 uppercase tracking-tight">${item.name || item.nama_produk}</td>
-                        <td class="p-6 text-slate-400">Rp ${(item.price || item.harga || 0).toLocaleString()}</td>
-                        <td class="p-6">
-                            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${item.commission_type === 'percentage' ? 'bg-purple-100 text-purple-600' : 'bg-orange-100 text-orange-600'}">
-                                ${item.commission_type || 'Belum diatur'}
-                            </span>
-                        </td>
-                        <td class="p-6 font-black text-blue-600">
-                            ${item.commission_type === 'percentage' ? (item.commission_value || 0) + '%' : 'Rp ' + (item.commission_value || 0).toLocaleString()}
-                        </td>
-                        <td class="p-6 text-center">
-                            <button onclick="openEditModal(${item.id}, '${item.name || item.nama_produk}', '${item.commission_type}', ${item.commission_value})" 
-                                class="bg-slate-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-blue-600 transition">Set</button>
-                        </td>
-                    </tr>
-                `).join('');
-            }
-        }
+    const { data, error } = await _supabase
+        .from(targetTable)
+        .select('*')
+        .order(nameColumn, { ascending: true }); // Menggunakan kolom yang benar
 
+    if (error) {
+        console.error("Error Detail:", error);
+        table.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-red-500">Error: ${error.message}. <br> <small>Pastikan tabel '${targetTable}' dan kolom '${nameColumn}' ada di Supabase.</small></td></tr>`;
+        return;
+    }
+
+    if (data) {
+        table.innerHTML = data.map(item => {
+            const displayName = isService ? item.name : item.nama_produk;
+            const displayPrice = isService ? item.price : item.harga;
+            
+            return `
+                <tr class="border-b hover:bg-slate-50 transition">
+                    <td class="p-6 uppercase tracking-tight">${displayName || 'Tanpa Nama'}</td>
+                    <td class="p-6 text-slate-400">Rp ${(displayPrice || 0).toLocaleString()}</td>
+                    <td class="p-6">
+                        <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${item.commission_type === 'percentage' ? 'bg-purple-100 text-purple-600' : 'bg-orange-100 text-orange-600'}">
+                            ${item.commission_type || 'Belum diatur'}
+                        </span>
+                    </td>
+                    <td class="p-6 font-black text-blue-600">
+                        ${item.commission_type === 'percentage' ? (item.commission_value || 0) + '%' : 'Rp ' + (item.commission_value || 0).toLocaleString()}
+                    </td>
+                    <td class="p-6 text-center">
+                        <button onclick="openEditModal(${item.id}, '${displayName}', '${item.commission_type}', ${item.commission_value})" 
+                            class="bg-slate-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-blue-600 transition">Set</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+}
         function switchTab(tab) {
             currentTab = tab;
             document.getElementById('tab-service').className = `px-6 py-3 rounded-xl font-black text-xs uppercase transition-all ${tab === 'service' ? 'tab-active' : 'text-slate-400'}`;
