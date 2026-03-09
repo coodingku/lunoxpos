@@ -196,20 +196,35 @@
             if(bk) document.getElementById('db-payment-method').innerHTML = '<option value="CASH">CASH</option>' + bk.map(b => `<option value="${b.name}">${b.name}</option>`).join('');
         }
 
-        async function loadMasterData() {
-            const out = document.getElementById('active-outlet').value;
-            const { data: tps } = await _supabase.from('therapists').select('*').eq('outlet_name', out);
-            masterTherapists = tps || [];
-            
-            masterServices = [
-                {id:'S1', name:'Traditional Massage', price:250000, dur:60},
-                {id:'S2', name:'Shiatsu Massage', price:350000, dur:90},
-                {id:'S3', name:'Body Scrub', price:200000, dur:45}
-            ];
-            
-            const { data: pd } = await _supabase.from('produk').select('*').eq('outlet_name', out);
-            masterProducts = pd || [];
-        }
+     async function loadMasterData() {
+    const out = document.getElementById('active-outlet').value;
+
+    // 1. Load Therapists
+    const { data: tps } = await _supabase.from('therapists').select('*').eq('outlet_name', out);
+    masterTherapists = tps || [];
+    
+    // 2. PERBAIKAN: Ambil dari Tabel 'services' (Bukan hardcoded lagi)
+    const { data: svc, error: svcError } = await _supabase
+        .from('services')
+        .select('*')
+        .eq('outlet_name', out) // Filter berdasarkan outlet aktif
+        .order('name', { ascending: true });
+
+    if (svcError) {
+        console.error("Gagal memuat Services:", svcError);
+        masterServices = [];
+    } else {
+        masterServices = svc;
+    }
+    
+    // 3. Load Products
+    const { data: pd } = await _supabase.from('produk').select('*').eq('outlet_name', out);
+    masterProducts = pd || [];
+
+    // Setelah data dimuat, panggil fungsi render menu jika ada
+    renderServiceMenu(); 
+    renderProductMenu();
+}
 
         async function loadRoomMap() {
             const out = document.getElementById('active-outlet').value;
