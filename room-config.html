@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room Configuration - LUNOX</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f1f5f9; }
+        .room-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .room-card:hover { transform: translateY(-5px); }
+    </style>
+</head>
+<body class="p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-10">
+            <div>
+                <h1 class="text-3xl font-black italic tracking-tighter text-slate-800 uppercase">Room <span class="text-blue-600">Config</span></h1>
+                <p class="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Pengaturan Layout & Kapasitas Ruangan</p>
+            </div>
+            <button onclick="openRoomModal()" class="bg-blue-600 text-white px-8 py-4 rounded-[2rem] font-black text-xs uppercase shadow-xl shadow-blue-100 hover:bg-black transition-all">
+                + Tambah Room Baru
+            </button>
+        </header>
+
+        <div id="room-container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            </div>
+    </div>
+
+    <div id="room-modal" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl">
+            <h3 id="modal-title" class="text-2xl font-black text-slate-800 mb-8 uppercase italic italic">Add Room</h3>
+            <div class="space-y-6">
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Nama Ruangan (Contoh: VIP 01)</label>
+                    <input type="text" id="r-name" placeholder="Contoh: ROOM 101" class="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none focus:border-blue-500 transition-all">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Outlet</label>
+                    <select id="r-outlet" class="w-full p-5 bg-slate-50 border-2 border-slate-100 rounded-[1.5rem] font-bold outline-none appearance-none">
+                        <option value="Delta">DELTA SPA</option>
+                        <option value="Cabana">CABANA SPA</option>
+                    </select>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button onclick="closeRoomModal()" class="flex-1 py-5 font-black text-slate-400 uppercase text-xs tracking-widest">Batal</button>
+                    <button onclick="saveRoom()" class="flex-1 bg-slate-900 text-white py-5 rounded-[1.5rem] font-black uppercase text-xs tracking-widest shadow-lg hover:bg-blue-600 transition-all">Simpan Room</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        let editingId = null;
+
+        async function loadRooms() {
+            const { data, error } = await _supabase.from('rooms').select('*').order('name');
+            const container = document.getElementById('room-container');
+            container.innerHTML = '';
+
+            if (data) {
+                data.forEach(r => {
+                    container.innerHTML += `
+                        <div class="room-card bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 relative group overflow-hidden">
+                            <div class="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-all space-x-1">
+                                <button onclick="editRoom(${r.id}, '${r.name}', '${r.outlet_name}')" class="bg-blue-50 text-blue-600 w-8 h-8 rounded-full hover:bg-blue-600 hover:text-white transition"><i class="fa fa-pen text-[10px]"></i></button>
+                                <button onclick="deleteRoom(${r.id})" class="bg-red-50 text-red-600 w-8 h-8 rounded-full hover:bg-red-600 hover:text-white transition"><i class="fa fa-trash text-[10px]"></i></button>
+                            </div>
+                            <div class="text-[9px] font-black text-blue-600 uppercase tracking-[0.2em] mb-2">${r.outlet_name}</div>
+                            <h3 class="text-2xl font-black text-slate-800 italic uppercase tracking-tighter">${r.name}</h3>
+                            <div class="mt-4 flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full ${r.status === 'available' ? 'bg-emerald-500' : 'bg-red-500'}"></span>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">${r.status}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        async function saveRoom() {
+            const name = document.getElementById('r-name').value;
+            const outlet = document.getElementById('r-outlet').value;
+
+            if(!name) return alert("Nama ruangan harus diisi!");
+
+            if (editingId) {
+                // UPDATE
+                await _supabase.from('rooms').update({ name, outlet_name: outlet }).eq('id', editingId);
+            } else {
+                // INSERT
+                await _supabase.from('rooms').insert([{ 
+                    name: name, 
+                    outlet_name: outlet,
+                    status: 'available' 
+                }]);
+            }
+
+            closeRoomModal();
+            loadRooms();
+        }
+
+        function editRoom(id, name, outlet) {
+            editingId = id;
+            document.getElementById('modal-title').innerText = "Edit Room";
+            document.getElementById('r-name').value = name;
+            document.getElementById('r-outlet').value = outlet;
+            document.getElementById('room-modal').classList.remove('hidden');
+        }
+
+        async function deleteRoom(id) {
+            if(confirm('Hapus ruangan ini selamanya?')) {
+                await _supabase.from('rooms').delete().eq('id', id);
+                loadRooms();
+            }
+        }
+
+        function openRoomModal() {
+            editingId = null;
+            document.getElementById('modal-title').innerText = "Add Room";
+            document.getElementById('r-name').value = '';
+            document.getElementById('room-modal').classList.remove('hidden');
+        }
+
+        function closeRoomModal() {
+            document.getElementById('room-modal').classList.add('hidden');
+        }
+
+        loadRooms();
+    </script>
+</body>
+</html>
