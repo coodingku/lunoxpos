@@ -364,29 +364,47 @@
         }
         function closePaymentModal() { document.getElementById('payment-modal').classList.add('hidden'); }
 
-        async function calculateTotal() {
-            const sub = activeOrders.reduce((a, b) => a + (b.harga_satuan * b.qty), 0);
-            const discPercent = parseFloat(document.getElementById('db-discount').value) || 0;
-            
-            const ppnPercent = 11;
-            const servicePercent = 5;
+       async function calculateTotal() {
+    const sub = activeOrders.reduce((a, b) => a + (b.harga_satuan * b.qty), 0);
+    const discPercent = parseFloat(document.getElementById('db-discount').value) || 0;
+    
+    // --- PERBAIKAN DI SINI: Ambil dari Database ---
+    const { data: settings } = await _supabase
+        .from('settings')
+        .select('*')
+        .eq('key', 'tax_config')
+        .maybeSingle();
 
-            const discountAmount = sub * (discPercent / 100);
-            const afterDiscount = sub - discountAmount;
-            
-            const serviceAmount = afterDiscount * (servicePercent / 100);
-            const ppnAmount = (afterDiscount + serviceAmount) * (ppnPercent / 100);
-            
-            const grandTotal = Math.round(afterDiscount + serviceAmount + ppnAmount);
+    // Jika di setting 0, maka variabel ini akan bernilai 0
+    const ppnPercent = settings ? settings.ppn : 0; 
+    const servicePercent = settings ? settings.service : 0;
 
-            document.getElementById('p-subtotal').innerText = `Rp ${sub.toLocaleString()}`;
-            document.getElementById('p-service').innerText = `Rp ${Math.round(serviceAmount).toLocaleString()}`;
-            document.getElementById('p-ppn').innerText = `Rp ${Math.round(ppnAmount).toLocaleString()}`;
-            document.getElementById('p-grand-total').innerText = `Rp ${grandTotal.toLocaleString()}`;
-            
-            return { sub, discountAmount, serviceAmount, ppnAmount, grandTotal };
-        }
+    const discountAmount = sub * (discPercent / 100);
+    const afterDiscount = sub - discountAmount;
+    
+    const serviceAmount = afterDiscount * (servicePercent / 100);
+    const ppnAmount = (afterDiscount + serviceAmount) * (ppnPercent / 100);
+    
+    const grandTotal = Math.round(afterDiscount + serviceAmount + ppnAmount);
 
+    // Update Tampilan Modal
+    document.getElementById('p-subtotal').innerText = `Rp ${sub.toLocaleString()}`;
+    
+    // Sembunyikan baris jika nilainya 0 agar tampilan bersih
+    const taxDetailDiv = document.getElementById('tax-details');
+    if (ppnPercent === 0 && servicePercent === 0) {
+        taxDetailDiv.classList.add('hidden');
+    } else {
+        taxDetailDiv.classList.remove('hidden');
+        document.getElementById('p-service').innerText = `Rp ${Math.round(serviceAmount).toLocaleString()}`;
+        document.getElementById('p-ppn').innerText = `Rp ${Math.round(ppnAmount).toLocaleString()}`;
+    }
+
+    document.getElementById('p-grand-total').innerText = `Rp ${grandTotal.toLocaleString()}`;
+    
+    return { sub, discountAmount, serviceAmount, ppnAmount, grandTotal };
+}
+        
         async function processCheckout() {
             const totals = await calculateTotal();
             const pay = document.getElementById('db-payment-method').value;
