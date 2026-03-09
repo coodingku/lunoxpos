@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUNOX SPA - MANAJEMEN TERAPIS</title>
+    <title>LUNOX SPA - MANAJEMEN STAFF</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -14,10 +14,10 @@
 </head>
 <body class="text-slate-100 p-4 md:p-8">
 
-    <div class="max-w-4xl mx-auto">
+    <div class="max-w-5xl mx-auto">
         <header class="mb-10 flex justify-between items-center">
             <div>
-                <h1 class="text-3xl font-black italic text-blue-500">DATABASE <span class="text-white">THERAPIST</span></h1>
+                <h1 class="text-3xl font-black italic text-blue-500">DATABASE <span class="text-white">STAFF</span></h1>
                 <p class="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Tambah & Atur Staff LUNOX SPA</p>
             </div>
             <a href="therapist-control.html" class="bg-slate-800 hover:bg-slate-700 px-5 py-2 rounded-xl text-xs font-bold transition">
@@ -31,12 +31,19 @@
                     <h3 class="text-lg font-black mb-6 uppercase italic text-blue-400">Tambah Baru</h3>
                     <div class="space-y-4">
                         <div>
-                            <label class="text-[10px] font-black text-slate-500 uppercase ml-1">ID Therapist</label>
-                            <input type="text" id="new-tid" placeholder="Contoh: T-01" class="w-full p-4 bg-slate-950 rounded-2xl border border-slate-800 outline-none font-bold text-white focus:border-blue-500 transition-all">
+                            <label class="text-[10px] font-black text-slate-500 uppercase ml-1">ID Staff / Therapist</label>
+                            <input type="text" id="new-tid" placeholder="Contoh: T-01 / S-01" class="w-full p-4 bg-slate-950 rounded-2xl border border-slate-800 outline-none font-bold text-white focus:border-blue-500 transition-all">
                         </div>
                         <div>
                             <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Nama Lengkap</label>
-                            <input type="text" id="new-name" placeholder="Nama Therapist" class="w-full p-4 bg-slate-950 rounded-2xl border border-slate-800 outline-none font-bold text-white focus:border-blue-500 transition-all">
+                            <input type="text" id="new-name" placeholder="Nama Staff" class="w-full p-4 bg-slate-950 rounded-2xl border border-slate-800 outline-none font-bold text-white focus:border-blue-500 transition-all">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Kategori</label>
+                            <select id="new-category" class="w-full p-4 bg-slate-950 rounded-2xl border border-slate-800 outline-none font-bold text-emerald-400">
+                                <option value="therapist">THERAPIST (MASSAGE)</option>
+                                <option value="staff">STAFF BIASA (PENJUALAN/FB)</option>
+                            </select>
                         </div>
                         <div>
                             <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Outlet</label>
@@ -45,7 +52,7 @@
                                 <option value="Cabana">CABANA SPA</option>
                             </select>
                         </div>
-                        <button onclick="addTherapist()" class="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-2xl font-black uppercase text-sm shadow-lg shadow-blue-900/40 transition-all mt-4">
+                        <button onclick="addStaff()" class="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-2xl font-black uppercase text-sm shadow-lg shadow-blue-900/40 transition-all mt-4">
                             Simpan Data
                         </button>
                     </div>
@@ -59,6 +66,7 @@
                             <tr class="bg-slate-800/50 text-[10px] font-black uppercase tracking-widest text-slate-400">
                                 <th class="p-5">ID</th>
                                 <th class="p-5">Nama</th>
+                                <th class="p-5">Kategori</th>
                                 <th class="p-5">Outlet</th>
                                 <th class="p-5">Status</th>
                                 <th class="p-5 text-center">Aksi</th>
@@ -77,11 +85,11 @@
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-        async function fetchAllTherapists() {
+        async function fetchAllStaff() {
             const { data, error } = await _supabase
                 .from('therapists')
                 .select('*')
-                .order('outlet_name', { ascending: true })
+                .order('category', { ascending: false }) // Terapis biasanya di atas
                 .order('t_id', { ascending: true });
 
             if (data) {
@@ -90,14 +98,19 @@
                     <tr class="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
                         <td class="p-5 font-black text-blue-500">${t.t_id}</td>
                         <td class="p-5 font-bold">${t.name}</td>
+                        <td class="p-5">
+                             <span class="px-2 py-1 rounded text-[9px] font-black uppercase ${t.category === 'therapist' ? 'bg-blue-500/10 text-blue-400' : 'bg-emerald-500/10 text-emerald-400'}">
+                                ${t.category || 'therapist'}
+                            </span>
+                        </td>
                         <td class="p-5 text-xs text-slate-400">${t.outlet_name}</td>
                         <td class="p-5">
-                            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${t.status === 'standby' ? 'bg-blue-900/50 text-blue-400' : 'bg-red-900/50 text-red-400'}">
+                            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${t.status === 'standby' ? 'bg-blue-900/50 text-blue-400' : 'bg-slate-800 text-slate-500'}">
                                 ${t.status}
                             </span>
                         </td>
                         <td class="p-5 text-center">
-                            <button onclick="deleteTherapist('${t.t_id}')" class="text-slate-600 hover:text-red-500 transition-colors">
+                            <button onclick="deleteStaff('${t.t_id}')" class="text-slate-600 hover:text-red-500 transition-colors">
                                 <i class="fa fa-trash-alt"></i>
                             </button>
                         </td>
@@ -106,9 +119,10 @@
             }
         }
 
-        async function addTherapist() {
+        async function addStaff() {
             const tid = document.getElementById('new-tid').value.toUpperCase().trim();
             const name = document.getElementById('new-name').value.trim();
+            const category = document.getElementById('new-category').value;
             const outlet = document.getElementById('new-outlet').value;
 
             if (!tid || !name) return alert("Mohon lengkapi ID dan Nama!");
@@ -118,33 +132,30 @@
                 .insert([{ 
                     t_id: tid, 
                     name: name, 
+                    category: category,
                     outlet_name: outlet, 
                     status: 'offline' 
                 }]);
 
             if (!error) {
-                alert("Therapist berhasil ditambahkan!");
+                alert("Staff berhasil ditambahkan!");
                 document.getElementById('new-tid').value = '';
                 document.getElementById('new-name').value = '';
-                fetchAllTherapists();
+                fetchAllStaff();
             } else {
-                alert("Error: ID mungkin sudah terdaftar.");
+                console.error(error);
+                alert("Error: Gagal menyimpan data. Pastikan kolom 'category' sudah ada di tabel database.");
             }
         }
 
-        async function deleteTherapist(tid) {
-            if (!confirm(`Hapus therapist ${tid}? Tindakan ini tidak bisa dibatalkan.`)) return;
-
-            const { error } = await _supabase
-                .from('therapists')
-                .delete()
-                .eq('t_id', tid);
-
-            if (!error) fetchAllTherapists();
+        async function deleteStaff(tid) {
+            if (!confirm(`Hapus staff ${tid}?`)) return;
+            const { error } = await _supabase.from('therapists').delete().eq('t_id', tid);
+            if (!error) fetchAllStaff();
         }
 
         // Load awal
-        fetchAllTherapists();
+        fetchAllStaff();
     </script>
 </body>
 </html>
