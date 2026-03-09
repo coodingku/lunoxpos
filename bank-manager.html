@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUNOX - BANK & PAYMENT METHODS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
+        .bank-card:hover { transform: translateY(-5px); border-color: #3b82f6; }
+    </style>
+</head>
+<body class="p-8">
+
+    <div class="max-w-5xl mx-auto">
+        <header class="mb-10 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-black italic tracking-tighter text-slate-800">PAYMENT <span class="text-blue-600">METHODS</span></h1>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Kelola Rekening & Metode Bayar</p>
+            </div>
+            <button onclick="openBankModal()" class="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-lg shadow-blue-200 hover:bg-blue-700 transition">
+                + Tambah Bank
+            </button>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="bg-white p-6 rounded-[2rem] border shadow-sm">
+                <div class="text-[10px] font-black text-slate-400 uppercase mb-2">Total Akun</div>
+                <div id="count-bank" class="text-3xl font-black text-slate-800">0</div>
+            </div>
+            <div class="bg-blue-600 p-6 rounded-[2rem] shadow-xl shadow-blue-200 text-white">
+                <div class="text-[10px] font-black text-blue-200 uppercase mb-2">Metode Utama</div>
+                <div class="text-xl font-bold">CASH & TRANSFER</div>
+            </div>
+            <div class="bg-emerald-500 p-6 rounded-[2rem] shadow-xl shadow-emerald-200 text-white">
+                <div class="text-[10px] font-black text-emerald-100 uppercase mb-2">Status Sistem</div>
+                <div class="text-xl font-bold flex items-center gap-2">
+                    <span class="w-2 h-2 bg-white rounded-full animate-ping"></span> Terhubung
+                </div>
+            </div>
+        </div>
+
+        <div id="bank-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+    </div>
+
+    <div id="modal-bank" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl">
+            <h3 id="modal-title" class="text-xl font-black uppercase italic mb-6">Informasi Bank</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Nama Bank / Metode</label>
+                    <input type="text" id="b-name" placeholder="Contoh: BCA, MANDIRI, QRIS" class="w-full p-4 bg-slate-50 rounded-2xl border-none ring-2 ring-slate-100 focus:ring-blue-500 outline-none font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Nomor Rekening (Opsional)</label>
+                    <input type="text" id="b-norek" placeholder="000-000-000" class="w-full p-4 bg-slate-50 rounded-2xl border-none ring-2 ring-slate-100 focus:ring-blue-500 outline-none font-bold text-slate-500">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Atas Nama</label>
+                    <input type="text" id="b-holder" placeholder="Nama Pemilik" class="w-full p-4 bg-slate-50 rounded-2xl border-none ring-2 ring-slate-100 focus:ring-blue-500 outline-none font-bold">
+                </div>
+                
+                <div class="flex items-center gap-2 p-2">
+                    <input type="checkbox" id="b-active" checked class="w-5 h-5 rounded-md">
+                    <label for="b-active" class="text-xs font-bold text-slate-600">Aktifkan di Kasir</label>
+                </div>
+
+                <div class="flex gap-4 pt-4">
+                    <button onclick="closeBankModal()" class="flex-1 py-4 font-black text-slate-400 uppercase text-xs">Batal</button>
+                    <button onclick="saveBank()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-xs shadow-lg">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        async function loadBanks() {
+            const { data, error } = await _supabase.from('banks').select('*').order('name');
+            if(data) {
+                document.getElementById('count-bank').innerText = data.length;
+                const grid = document.getElementById('bank-grid');
+                grid.innerHTML = data.map(b => `
+                    <div class="bank-card bg-white p-8 rounded-[2.5rem] border-2 border-transparent shadow-sm transition-all relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 p-6">
+                            <i class="fa fa-university text-slate-50 text-5xl group-hover:text-blue-50 transition-colors"></i>
+                        </div>
+                        <div class="relative z-10">
+                            <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase ${b.is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}">
+                                ${b.is_active ? 'Active' : 'Disabled'}
+                            </span>
+                            <h3 class="text-2xl font-black italic text-slate-800 mt-4 uppercase">${b.name}</h3>
+                            <p class="text-slate-500 font-bold text-sm mt-1">${b.no_rekening || 'Metode Langsung'}</p>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mt-4">Atas Nama:</p>
+                            <p class="text-slate-700 font-black uppercase text-xs">${b.atas_nama || '-'}</p>
+                            
+                            <div class="flex gap-4 mt-8 pt-6 border-t border-dashed">
+                                <button onclick="deleteBank(${b.id})" class="text-slate-300 hover:text-red-500 transition"><i class="fa fa-trash-alt"></i></button>
+                                <button onclick="toggleStatus(${b.id}, ${b.is_active})" class="text-xs font-black uppercase text-blue-600 ml-auto">Ubah Status</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function saveBank() {
+            const name = document.getElementById('b-name').value;
+            const norek = document.getElementById('b-norek').value;
+            const holder = document.getElementById('b-holder').value;
+            const active = document.getElementById('b-active').checked;
+
+            if(!name) return alert("Minimal isi Nama Bank!");
+
+            const { error } = await _supabase.from('banks').insert([{
+                name: name, no_rekening: norek, atas_nama: holder, is_active: active
+            }]);
+
+            if(!error) {
+                closeBankModal();
+                loadBanks();
+                // Reset form
+                document.getElementById('b-name').value = '';
+                document.getElementById('b-norek').value = '';
+                document.getElementById('b-holder').value = '';
+            } else {
+                alert("Gagal menyimpan bank.");
+            }
+        }
+
+        async function toggleStatus(id, current) {
+            await _supabase.from('banks').update({ is_active: !current }).eq('id', id);
+            loadBanks();
+        }
+
+        async function deleteBank(id) {
+            if(confirm('Hapus metode pembayaran ini?')) {
+                await _supabase.from('banks').delete().eq('id', id);
+                loadBanks();
+            }
+        }
+
+        function openBankModal() { document.getElementById('modal-bank').classList.remove('hidden'); }
+        function closeBankModal() { document.getElementById('modal-bank').classList.add('hidden'); }
+
+        loadBanks();
+    </script>
+</body>
+</html>
