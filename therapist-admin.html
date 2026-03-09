@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUNOX SPA - MANAJEMEN TERAPIS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; }
+    </style>
+</head>
+<body class="text-slate-100 p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="mb-10 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-black italic text-blue-500">DATABASE <span class="text-white">THERAPIST</span></h1>
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Tambah & Atur Staff LUNOX SPA</p>
+            </div>
+            <a href="therapist-control.html" class="bg-slate-800 hover:bg-slate-700 px-5 py-2 rounded-xl text-xs font-bold transition">
+                <i class="fa fa-arrow-left mr-2"></i> Kembali ke Control
+            </a>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="md:col-span-1">
+                <div class="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] sticky top-8 shadow-2xl">
+                    <h3 class="text-lg font-black mb-6 uppercase italic text-blue-400">Tambah Baru</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-[10px] font-black text-slate-500 uppercase ml-1">ID Therapist</label>
+                            <input type="text" id="new-tid" placeholder="Contoh: T-01" class="w-full p-4 bg-slate-950 rounded-2xl border border-slate-800 outline-none font-bold text-white focus:border-blue-500 transition-all">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Nama Lengkap</label>
+                            <input type="text" id="new-name" placeholder="Nama Therapist" class="w-full p-4 bg-slate-950 rounded-2xl border border-slate-800 outline-none font-bold text-white focus:border-blue-500 transition-all">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Outlet</label>
+                            <select id="new-outlet" class="w-full p-4 bg-slate-950 rounded-2xl border border-slate-800 outline-none font-bold text-blue-400">
+                                <option value="Delta">DELTA SPA</option>
+                                <option value="Cabana">CABANA SPA</option>
+                            </select>
+                        </div>
+                        <button onclick="addTherapist()" class="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-2xl font-black uppercase text-sm shadow-lg shadow-blue-900/40 transition-all mt-4">
+                            Simpan Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="md:col-span-2">
+                <div class="bg-slate-900/50 border border-slate-800 rounded-[2rem] overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-800/50 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                <th class="p-5">ID</th>
+                                <th class="p-5">Nama</th>
+                                <th class="p-5">Outlet</th>
+                                <th class="p-5">Status</th>
+                                <th class="p-5 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="therapist-list-body" class="text-sm">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        async function fetchAllTherapists() {
+            const { data, error } = await _supabase
+                .from('therapists')
+                .select('*')
+                .order('outlet_name', { ascending: true })
+                .order('t_id', { ascending: true });
+
+            if (data) {
+                const body = document.getElementById('therapist-list-body');
+                body.innerHTML = data.map(t => `
+                    <tr class="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
+                        <td class="p-5 font-black text-blue-500">${t.t_id}</td>
+                        <td class="p-5 font-bold">${t.name}</td>
+                        <td class="p-5 text-xs text-slate-400">${t.outlet_name}</td>
+                        <td class="p-5">
+                            <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${t.status === 'standby' ? 'bg-blue-900/50 text-blue-400' : 'bg-red-900/50 text-red-400'}">
+                                ${t.status}
+                            </span>
+                        </td>
+                        <td class="p-5 text-center">
+                            <button onclick="deleteTherapist('${t.t_id}')" class="text-slate-600 hover:text-red-500 transition-colors">
+                                <i class="fa fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function addTherapist() {
+            const tid = document.getElementById('new-tid').value.toUpperCase().trim();
+            const name = document.getElementById('new-name').value.trim();
+            const outlet = document.getElementById('new-outlet').value;
+
+            if (!tid || !name) return alert("Mohon lengkapi ID dan Nama!");
+
+            const { error } = await _supabase
+                .from('therapists')
+                .insert([{ 
+                    t_id: tid, 
+                    name: name, 
+                    outlet_name: outlet, 
+                    status: 'offline' 
+                }]);
+
+            if (!error) {
+                alert("Therapist berhasil ditambahkan!");
+                document.getElementById('new-tid').value = '';
+                document.getElementById('new-name').value = '';
+                fetchAllTherapists();
+            } else {
+                alert("Error: ID mungkin sudah terdaftar.");
+            }
+        }
+
+        async function deleteTherapist(tid) {
+            if (!confirm(`Hapus therapist ${tid}? Tindakan ini tidak bisa dibatalkan.`)) return;
+
+            const { error } = await _supabase
+                .from('therapists')
+                .delete()
+                .eq('t_id', tid);
+
+            if (!error) fetchAllTherapists();
+        }
+
+        // Load awal
+        fetchAllTherapists();
+    </script>
+</body>
+</html>
