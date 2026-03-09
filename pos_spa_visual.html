@@ -14,6 +14,9 @@
         .room-cleaning { border: 2px solid #eab308; background: #fefce8; }
         .modal-animate { animation: slideUp 0.2s ease-out; }
         @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        /* Custom Scrollbar */
+        #bill-items::-webkit-scrollbar { width: 4px; }
+        #bill-items::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen font-sans">
@@ -33,8 +36,7 @@
     </header>
 
     <main class="p-6">
-        <div id="room-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 text-center">
-            </div>
+        <div id="room-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 text-center"></div>
     </main>
 
     <div id="pos-modal" class="fixed inset-0 bg-slate-900/80 hidden z-50 flex items-center justify-center p-4 backdrop-blur-md">
@@ -43,8 +45,8 @@
             <div class="flex-1 p-8 overflow-y-auto border-r">
                 <div class="flex justify-between items-start mb-8">
                     <div>
-                        <h2 id="modal-room-name" class="text-4xl font-black italic uppercase">ROOM --</h2>
-                        <span id="room-status-badge" class="px-3 py-1 rounded-full text-[10px] font-black uppercase">STATUS</span>
+                        <h2 id="modal-room-name" class="text-4xl font-black italic uppercase text-slate-800">ROOM --</h2>
+                        <span id="room-status-badge" class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">STATUS</span>
                     </div>
                     <button onclick="closeModal()" class="text-slate-300 hover:text-red-500 text-3xl transition">&times;</button>
                 </div>
@@ -54,12 +56,11 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <select id="input-therapist" class="p-4 bg-slate-100 rounded-2xl border-none font-bold outline-none text-blue-600 w-full"></select>
                         <select id="input-service" class="p-4 bg-slate-100 rounded-2xl border-none font-bold outline-none w-full">
-                            <option value="Trad. Massage" data-price="250000" data-dur="60">Trad. Massage (60m) - 250k</option>
+                            <option value="Massage Tradisional" data-price="250000" data-dur="60">Massage Tradisional (60m) - 250k</option>
                             <option value="Shiatsu" data-price="350000" data-dur="90">Shiatsu (90m) - 350k</option>
-                            <option value="Royal Spa" data-price="500000" data-dur="120">Royal Spa (120m) - 500k</option>
                         </select>
                     </div>
-                    <button onclick="startSession()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase italic shadow-lg shadow-blue-200 hover:bg-blue-700">Check-In & Start</button>
+                    <button onclick="startSession()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase italic shadow-lg shadow-blue-200 hover:shadow-none transition-all">Check-In & Start</button>
                 </div>
 
                 <div class="space-y-4">
@@ -74,8 +75,7 @@
 
             <div class="w-full md:w-96 bg-slate-50 p-8 flex flex-col">
                 <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Current Bill (Live)</h3>
-                <div id="bill-items" class="flex-1 overflow-y-auto space-y-3 pr-2">
-                    </div>
+                <div id="bill-items" class="flex-1 overflow-y-auto space-y-3 pr-2"></div>
                 
                 <div class="border-t border-slate-200 pt-6 mt-6">
                     <div class="flex justify-between items-center mb-6">
@@ -99,7 +99,6 @@
         let currentRoom = null;
         let activeOrders = [];
 
-        // LOAD MAP
         async function loadRoomMap() {
             const outlet = document.getElementById('active-outlet').value;
             document.getElementById('outlet-display').innerText = `${outlet} Floor Map`;
@@ -112,7 +111,6 @@
                 const card = document.createElement('div');
                 card.className = `room-${room.status} p-8 rounded-[2.5rem] shadow-sm cursor-pointer hover:shadow-xl transition-all relative`;
                 card.onclick = () => openModal(room);
-                
                 card.innerHTML = `
                     <div class="text-[9px] font-black uppercase mb-1 opacity-40">${room.status}</div>
                     <h3 class="font-black text-xl italic tracking-tighter">${room.name}</h3>
@@ -123,24 +121,20 @@
             loadMasterData();
         }
 
-        // LOAD DROPDOWNS (THERAPIST & PRODUCTS)
         async function loadMasterData() {
             const outlet = document.getElementById('active-outlet').value;
-            
-            // Products
-            const { data: products } = await _supabase.from('products').select('*').order('name');
+            // Load dari tabel 'produk'
+            const { data: products } = await _supabase.from('produk').select('*').eq('outlet_name', outlet).order('nama_produk');
             document.getElementById('input-product').innerHTML = products.map(p => 
-                `<option value="${p.id}" data-name="${p.name}" data-price="${p.price}">${p.name} - ${p.price.toLocaleString()}</option>`
+                `<option value="${p.id}" data-name="${p.nama_produk}" data-price="${p.harga}">${p.nama_produk} - ${p.harga.toLocaleString()}</option>`
             ).join('');
 
-            // Therapists Standby
             const { data: tps } = await _supabase.from('therapists').select('*').eq('outlet_name', outlet).eq('status', 'standby');
             document.getElementById('input-therapist').innerHTML = tps.map(t => 
                 `<option value="${t.t_id}">${t.t_id} - ${t.name}</option>`
             ).join('');
         }
 
-        // OPEN MODAL & FETCH BILL
         async function openModal(room) {
             currentRoom = room;
             document.getElementById('modal-room-name').innerText = room.name;
@@ -163,10 +157,11 @@
         }
 
         async function fetchActiveBill(roomId) {
-            const { data, error } = await _supabase.from('orders')
-                .select('id, product_name, price, qty')
+            // Load dari tabel 'transaksi_spa'
+            const { data, error } = await _supabase.from('transaksi_spa')
+                .select('*')
                 .eq('room_id', roomId)
-                .eq('status', 'pending');
+                .eq('status_bayar', 'pending');
             
             activeOrders = data || [];
             renderBillUI();
@@ -176,112 +171,103 @@
             const container = document.getElementById('bill-items');
             let total = 0;
             container.innerHTML = activeOrders.map(item => {
-                total += (item.price * item.qty);
+                const subtotal = item.harga_satuan * item.qty;
+                total += subtotal;
                 return `
-                    <div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                        <div>
-                            <div class="text-[11px] font-black uppercase text-slate-800">${item.product_name}</div>
-                            <div class="text-[10px] text-slate-400 font-bold">Qty: ${item.qty}</div>
+                    <div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm group">
+                        <div class="flex-1">
+                            <div class="text-[11px] font-black uppercase text-slate-800">${item.nama_item}</div>
+                            <div class="text-[10px] text-slate-400 font-bold">Qty: ${item.qty} x ${item.harga_satuan.toLocaleString()}</div>
                         </div>
-                        <div class="text-sm font-black text-blue-600">Rp ${(item.price * item.qty).toLocaleString()}</div>
+                        <div class="text-right flex flex-col items-end gap-1">
+                            <div class="text-sm font-black text-blue-600">Rp ${subtotal.toLocaleString()}</div>
+                            <button onclick="deleteItem('${item.id}')" class="text-[10px] text-red-400 hover:text-red-600 font-bold opacity-0 group-hover:opacity-100 transition-all">
+                                <i class="fa fa-trash-can"></i> Hapus
+                            </button>
+                        </div>
                     </div>
                 `;
             }).join('');
             document.getElementById('bill-total').innerText = `Rp ${total.toLocaleString()}`;
         }
 
-        // ADD FNB TO BILL
-       // Fungsi Tambah FnB yang lebih aman
-async function addToBill() {
-    if(!currentRoom) return alert("Pilih Room terlebih dahulu!");
-    
-    const p = document.getElementById('input-product');
-    const opt = p.options[p.selectedIndex];
-    const qty = parseInt(document.getElementById('input-qty').value);
-
-    // Persiapkan data pesanan
-    const orderData = {
-        room_id: currentRoom.id, // Pastikan ID Room dikirim
-        product_name: opt.dataset.name,
-        price: parseInt(opt.dataset.price),
-        qty: qty,
-        status: 'pending',
-        outlet_name: document.getElementById('active-outlet').value
-    };
-
-    console.log("Mengirim data pesanan:", orderData);
-
-    const { data, error } = await _supabase.from('orders').insert([orderData]).select();
-
-    if(error) {
-        console.error("Detail Error Supabase:", error);
-        alert("Gagal Simpan: " + error.message);
-    } else {
-        // Jika room tadi available, ubah ke occupied karena sudah ada pesanan masuk
-        if(currentRoom.status === 'available') {
-            await _supabase.from('rooms').update({ status: 'occupied' }).eq('id', currentRoom.id);
-            currentRoom.status = 'occupied';
-            document.getElementById('form-massage').classList.add('hidden');
-            document.getElementById('btn-checkout').disabled = false;
+        async function deleteItem(id) {
+            if(!confirm("Hapus item ini?")) return;
+            const { error } = await _supabase.from('transaksi_spa').delete().eq('id', id);
+            if(!error) fetchActiveBill(currentRoom.id);
         }
-        fetchActiveBill(currentRoom.id);
-    }
-}
-        // START MASSAGE SESSION
+
+        async function addToBill() {
+            if(!currentRoom) return;
+            const p = document.getElementById('input-product');
+            const opt = p.options[p.selectedIndex];
+            const qty = parseInt(document.getElementById('input-qty').value);
+
+            const { error } = await _supabase.from('transaksi_spa').insert([{
+                room_id: currentRoom.id,
+                nama_item: opt.dataset.name,
+                harga_satuan: parseInt(opt.dataset.price),
+                qty: qty,
+                status_bayar: 'pending',
+                outlet_name: document.getElementById('active-outlet').value
+            }]).select();
+
+            if(error) {
+                alert("Gagal Simpan: " + error.message);
+            } else {
+                if(currentRoom.status === 'available') {
+                    await _supabase.from('rooms').update({ status: 'occupied' }).eq('id', currentRoom.id);
+                    currentRoom.status = 'occupied';
+                    document.getElementById('form-massage').classList.add('hidden');
+                    document.getElementById('btn-checkout').disabled = false;
+                    openModal(currentRoom);
+                }
+                fetchActiveBill(currentRoom.id);
+            }
+        }
+
         async function startSession() {
             const tid = document.getElementById('input-therapist').value;
             const s = document.getElementById('input-service');
             const opt = s.options[s.selectedIndex];
-            const duration = parseInt(opt.dataset.dur);
             const price = parseInt(opt.dataset.price);
             
             if(!tid) return alert("Pilih Therapist!");
 
-            const finishTime = new Date(new Date().getTime() + duration * 60000).toISOString();
+            const finishTime = new Date(new Date().getTime() + 60 * 60000).toISOString();
 
-            // 1. Database Updates
             await _supabase.from('rooms').update({ status: 'occupied', therapist_id: tid, end_time: finishTime }).eq('id', currentRoom.id);
             await _supabase.from('therapists').update({ status: 'progress', end_time: finishTime }).eq('t_id', tid);
             
-            // 2. Add Massage to Orders
-            await _supabase.from('orders').insert([{
+            await _supabase.from('transaksi_spa').insert([{
                 room_id: currentRoom.id,
-                product_name: `MASSAGE: ${opt.value}`,
-                price: price,
+                nama_item: `MASSAGE: ${opt.value}`,
+                harga_satuan: price,
                 qty: 1,
-                status: 'pending',
+                status_bayar: 'pending',
                 outlet_name: document.getElementById('active-outlet').value,
-                staff_id: tid
+                therapist_id: tid
             }]);
 
             loadRoomMap();
             closeModal();
         }
 
-        // CHECKOUT
         async function checkout() {
-            if(!confirm("Proses Pembayaran & Selesaikan Sesi?")) return;
-            
-            await _supabase.from('orders').update({ status: 'completed' }).eq('room_id', currentRoom.id).eq('status', 'pending');
-            
+            if(!confirm("Proses Pembayaran?")) return;
+            await _supabase.from('transaksi_spa').update({ status_bayar: 'completed' }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
             if(currentRoom.therapist_id) {
                 await _supabase.from('therapists').update({ status: 'standby', end_time: null }).eq('t_id', currentRoom.therapist_id);
             }
             await _supabase.from('rooms').update({ status: 'available', therapist_id: null, end_time: null }).eq('id', currentRoom.id);
-            
             alert("Checkout Berhasil!");
             closeModal();
             loadRoomMap();
         }
 
         function closeModal() { document.getElementById('pos-modal').classList.add('hidden'); }
-        
-        // AUTO UPDATE UI
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('id-ID'); }, 1000);
-        
         loadRoomMap();
-        
-        // REALTIME SUBSCRIPTION
         _supabase.channel('room_db').on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, loadRoomMap).subscribe();
     </script>
 </body>
