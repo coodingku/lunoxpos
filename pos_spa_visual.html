@@ -21,9 +21,6 @@
             100% { box-shadow: 0 0 0 0px rgba(220, 38, 38, 0); } 
         }
 
-        .animate-pop { animation: pop-in 0.4s cubic-bezier(0.17, 0.89, 0.32, 1.49); }
-        @keyframes pop-in { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
-
         @media print {
             body * { visibility: hidden; }
             #thermal-receipt, #thermal-receipt * { visibility: visible; }
@@ -59,6 +56,7 @@
                     <h2 id="modal-room-name" class="text-5xl font-black italic uppercase tracking-tighter text-blue-600">ROOM --</h2>
                     <button onclick="closeModal()" class="text-slate-300 hover:text-red-500 text-5xl transition">&times;</button>
                 </div>
+                
                 <div class="space-y-6">
                     <div id="form-massage" class="bg-slate-50 p-6 rounded-[2.5rem] border-2 border-dashed border-slate-200">
                         <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Therapist & Layanan</label>
@@ -122,30 +120,6 @@
         </div>
     </div>
 
-    <div id="payment-modal" class="fixed inset-0 bg-blue-900/90 hidden z-[60] flex items-center justify-center p-4 backdrop-blur-xl">
-        <div class="bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl">
-            <h2 class="text-2xl font-black text-center uppercase mb-8 italic">Checkout</h2>
-            <div class="space-y-4 mb-8">
-                <div class="flex justify-between text-slate-500 font-bold text-xs uppercase"><span>Subtotal</span><span id="p-subtotal">0</span></div>
-                <div class="flex justify-between items-center text-red-500 font-bold text-xs uppercase">
-                    <span>Diskon</span>
-                    <select id="db-discount" onchange="calculateTotal()" class="bg-red-50 rounded-lg px-2 py-1 font-black outline-none cursor-pointer"></select>
-                </div>
-                <div class="pt-6 border-t-2 border-dashed flex justify-between items-center font-black">
-                    <span class="text-slate-800 text-lg uppercase">Total Akhir</span>
-                    <span id="p-grand-total" class="text-4xl text-blue-600 tracking-tighter">0</span>
-                </div>
-            </div>
-            <div class="space-y-4">
-                <select id="db-payment-method" class="w-full p-5 bg-slate-100 rounded-2xl font-black outline-none text-center text-lg"></select>
-                <div class="grid grid-cols-2 gap-4 pt-4">
-                    <button onclick="closePaymentModal()" class="py-5 font-black text-slate-400 uppercase text-xs">Batal</button>
-                    <button onclick="processCheckout()" class="bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-lg">Print & Selesai</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div id="modal-attendance" class="fixed inset-0 bg-slate-900/95 hidden z-[100] flex items-center justify-center p-4 backdrop-blur-xl">
         <div class="bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl text-center">
             <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-inner"><i class="fa fa-fingerprint"></i></div>
@@ -158,16 +132,6 @@
         </div>
     </div>
 
-    <div id="notification-container" class="fixed bottom-8 right-8 z-[100] w-80 space-y-4 pointer-events-none"></div>
-
-    <div id="thermal-receipt" class="hidden font-mono text-[10px] w-[58mm] bg-white text-black p-2">
-        <div class="text-center font-bold text-xs mb-1 italic">LUNOX SPA</div>
-        <div id="r-outlet" class="text-center mb-2 uppercase text-[8px]">---</div>
-        <div class="border-b border-dashed mb-2"></div>
-        <div id="r-items-list" class="space-y-1 mb-2"></div>
-        <div class="border-t border-dashed pt-2 flex justify-between font-bold text-xs"><span>TOTAL</span><span id="r-total"></span></div>
-    </div>
-
     <script>
         const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
@@ -175,31 +139,26 @@
 
         let currentRoom = null, activeOrders = [], masterRoomsData = [];
         let masterTherapists = [], masterServices = [], masterProducts = [];
-        let selectedPicker = {}, alertedRooms = new Set();
+        let selectedPicker = {};
         let selectedSellerId = null;
 
         async function init() {
-            await fetchSettings();
             await loadMasterData();
             loadRoomMap();
         }
 
-        async function fetchSettings() {
-            const { data: ds } = await _supabase.from('discounts').select('*').eq('active', true);
-            document.getElementById('db-discount').innerHTML = '<option value="0">0% Diskon</option>' + (ds || []).map(d => `<option value="${d.value}">${d.name} (${d.value}%)</option>`).join('');
-            const { data: bk } = await _supabase.from('banks').select('*').eq('is_active', true);
-            document.getElementById('db-payment-method').innerHTML = '<option value="CASH">CASH (TUNAI)</option>' + (bk || []).map(b => `<option value="${b.name}">${b.name}</option>`).join('');
-        }
-
         async function loadMasterData() {
             const out = document.getElementById('active-outlet').value;
+            // Filter hanya yang standby untuk picker POS, tapi attendance butuh semua data
             const { data: tps } = await _supabase.from('therapists').select('*').eq('outlet_name', out).eq('status', 'standby');
             masterTherapists = tps || [];
+            
             masterServices = [
                 {id:'S1', name:'Traditional Massage', price:250000, dur:60},
                 {id:'S2', name:'Shiatsu Massage', price:350000, dur:90},
                 {id:'S3', name:'Body Scrub', price:200000, dur:45}
             ];
+            
             const { data: pd } = await _supabase.from('produk').select('*').eq('outlet_name', out);
             masterProducts = pd || [];
         }
@@ -225,140 +184,53 @@
             });
         }
 
+        // FUNGSI ABSENSI YANG SUDAH DIPERBAIKI
+        async function processAbsensi() {
+            const staffId = document.getElementById('staff-id-input').value;
+            if (!staffId) return;
+
+            // 1. Cek keberadaan staff di DB
+            const { data: staff, error } = await _supabase
+                .from('therapists')
+                .select('*')
+                .eq('t_id', staffId)
+                .single();
+
+            if (error || !staff) {
+                alert("ID Staff tidak ditemukan!");
+            } else {
+                // 2. UPDATE STATUS KE 'standby' (WAJIB AGAR TAMPIL DI SPA CONTROL)
+                const { error: updateError } = await _supabase
+                    .from('therapists')
+                    .update({ 
+                        status: 'standby',
+                        last_absent: new Date() 
+                    })
+                    .eq('t_id', staffId);
+
+                if (!updateError) {
+                    alert(`Absensi Berhasil: ${staff.name} SEKARANG STANDBY.`);
+                    closeAttendanceModal();
+                    loadMasterData(); // Refresh data lokal
+                } else {
+                    alert("Error Update: " + updateError.message);
+                }
+            }
+        }
+
         function openModal(r) { 
             currentRoom = r; 
             selectedSellerId = null; 
             selectedPicker = {};
             document.getElementById('modal-room-name').innerText = r.name; 
-            document.getElementById('label-therapist').innerText = "Pilih Therapist...";
-            document.getElementById('label-service').innerText = "Pilih Layanan...";
-            document.getElementById('label-seller').innerText = "Pilih Staff Penjual...";
-            document.getElementById('label-product').innerText = "Cari Item...";
             document.getElementById('pos-modal').classList.remove('hidden'); 
             fetchActiveBill(r.id);
         }
 
-        function openPicker(type) {
-            selectedPicker.type = type;
-            const body = document.getElementById('picker-table-body'); body.innerHTML = '';
-            let data = (type === 'therapist' || type === 'therapist_seller') ? masterTherapists : (type === 'service' ? masterServices : masterProducts);
-
-            data.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b hover:bg-blue-50 cursor-pointer";
-                tr.onclick = () => {
-                    if(type === 'therapist') { selectedPicker.tId = item.t_id; document.getElementById('label-therapist').innerText = item.name; }
-                    if(type === 'therapist_seller') { selectedSellerId = item.t_id; document.getElementById('label-seller').innerText = "Penjual: " + item.name; }
-                    if(type === 'service') { selectedPicker.sName = item.name; selectedPicker.sPrice = item.price; selectedPicker.sDur = item.dur; document.getElementById('label-service').innerText = item.name; }
-                    if(type === 'product') { selectedPicker.pName = item.nama_produk || item.name; selectedPicker.pPrice = item.harga || item.price; document.getElementById('label-product').innerText = item.nama_produk || item.name; }
-                    closePicker();
-                };
-                tr.innerHTML = `<td class="p-5 uppercase">${item.name || item.nama_produk}</td><td class="p-5 text-right text-xs opacity-50 font-black">${item.price ? 'Rp '+item.price.toLocaleString() : (item.harga ? 'Rp '+item.harga.toLocaleString() : 'READY')}</td>`;
-                body.appendChild(tr);
-            });
-            document.getElementById('picker-title').innerText = type.replace('_', ' ').toUpperCase();
-            document.getElementById('picker-modal').classList.remove('hidden');
-        }
-
-        async function startSession() {
-            if(!selectedPicker.tId || !selectedPicker.sName) return alert("Pilih Therapist & Layanan!");
-            const end = new Date(Date.now() + selectedPicker.sDur * 60000).toISOString();
-            await _supabase.from('rooms').update({ status: 'occupied', therapist_id: selectedPicker.tId, end_time: end }).eq('id', currentRoom.id);
-            await _supabase.from('therapists').update({ status: 'progress', end_time: end }).eq('t_id', selectedPicker.tId);
-            await _supabase.from('transaksi_spa').insert([{ room_id: currentRoom.id, nama_item: selectedPicker.sName, harga_satuan: selectedPicker.sPrice, qty: 1, status_bayar: 'pending', outlet_name: document.getElementById('active-outlet').value, therapist_id: selectedPicker.tId }]);
-            closeModal(); init();
-        }
-
-        async function addToBill() {
-            if(!selectedPicker.pName) return alert("Pilih produk!");
-            if(!selectedSellerId) return alert("Pilih Penjual dulu!");
-            await _supabase.from('transaksi_spa').insert([{ room_id: currentRoom.id, nama_item: selectedPicker.pName, harga_satuan: selectedPicker.pPrice, qty: parseInt(document.getElementById('input-qty').value), status_bayar: 'pending', outlet_name: document.getElementById('active-outlet').value, therapist_id: selectedSellerId }]);
-            fetchActiveBill(currentRoom.id);
-            document.getElementById('label-product').innerText = "Cari Item...";
-            selectedPicker.pName = null;
-        }
-
-        async function fetchActiveBill(id) {
-            const { data } = await _supabase.from('transaksi_spa').select('*').eq('room_id', id).eq('status_bayar', 'pending');
-            activeOrders = data || [];
-            document.getElementById('bill-items').innerHTML = activeOrders.map(i => `
-                <div class="bg-white p-5 rounded-2xl border-2 flex justify-between items-center shadow-sm">
-                    <div class="text-[10px] font-black uppercase">${i.nama_item}<br><span class="text-blue-600">${i.qty}x</span></div>
-                    <div class="text-right">
-                        <b class="text-sm block">Rp ${(i.harga_satuan*i.qty).toLocaleString()}</b>
-                        <button onclick="deleteItem(${i.id})" class="text-[9px] text-red-500 font-bold uppercase mt-1">Hapus</button>
-                    </div>
-                </div>`).join('');
-        }
-
-        async function deleteItem(id) {
-            if(confirm('Hapus item ini?')) {
-                await _supabase.from('transaksi_spa').delete().eq('id', id);
-                fetchActiveBill(currentRoom.id);
-            }
-        }
-
-        async function processCheckout() {
-            const calc = calculateTotal();
-            const pay = document.getElementById('db-payment-method').value;
-            await _supabase.from('transaksi_spa').update({ status_bayar: 'completed', total_bayar: calc.grand, payment_method: pay, checkout_at: new Date() }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
-            await _supabase.from('rooms').update({ status: 'available', therapist_id: null, end_time: null }).eq('id', currentRoom.id);
-            if(currentRoom.therapist_id) await _supabase.from('therapists').update({ status: 'standby', end_time: null }).eq('t_id', currentRoom.therapist_id);
-
-            document.getElementById('r-outlet').innerText = document.getElementById('active-outlet').value;
-            document.getElementById('r-items-list').innerHTML = activeOrders.map(i => `<div>${i.nama_item} x${i.qty} - ${(i.harga_satuan*i.qty).toLocaleString()}</div>`).join('');
-            document.getElementById('r-total').innerText = calc.grand.toLocaleString();
-
-            window.print();
-            closePaymentModal(); closeModal(); init();
-        }
-
-        function calculateTotal() {
-            const sub = activeOrders.reduce((a, b) => a + (b.harga_satuan * b.qty), 0);
-            const disc = parseFloat(document.getElementById('db-discount').value) || 0;
-            const grand = sub - (sub * disc / 100);
-            document.getElementById('p-subtotal').innerText = `Rp ${sub.toLocaleString()}`;
-            document.getElementById('p-grand-total').innerText = `Rp ${grand.toLocaleString()}`;
-            return { sub, grand };
-        }
-
-        // Logic Attendance, Timer, dll (Tetap sama dengan sebelumnya)
-       async function processAbsensi() {
-    const staffId = document.getElementById('staff-id-input').value;
-    if (!staffId) return;
-
-    // 1. Cek apakah staff ada
-    const { data: staff, error } = await _supabase
-        .from('therapists')
-        .select('*')
-        .eq('t_id', staffId)
-        .single();
-
-    if (error || !staff) {
-        playVoice("ID Staff tidak dikenal.");
-        alert("ID Staff tidak ditemukan!");
-    } else {
-        // 2. UPDATE STATUS KE STANDBY agar muncul di Spa Control
-        const { error: updateError } = await _supabase
-            .from('therapists')
-            .update({ 
-                status: 'standby',
-                last_absent: new Date() // Opsional: catat jam absen terakhir
-            })
-            .eq('t_id', staffId);
-
-        if (!updateError) {
-            playVoice(`Selamat bekerja ${staff.name}`);
-            alert(`Absensi Berhasil: ${staff.name} sekarang STANDBY.`);
-            closeAttendanceModal();
-            
-            // Refresh master data lokal agar picker juga terupdate
-            loadMasterData(); 
-        } else {
-            alert("Gagal update status: " + updateError.message);
-        }
-    }
-}
+        function closeModal() { document.getElementById('pos-modal').classList.add('hidden'); }
+        function openAttendanceModal() { document.getElementById('modal-attendance').classList.remove('hidden'); document.getElementById('staff-id-input').focus(); }
+        function closeAttendanceModal() { document.getElementById('modal-attendance').classList.add('hidden'); document.getElementById('staff-id-input').value = ''; }
+        
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('id-ID'); }, 1000);
         init();
     </script>
