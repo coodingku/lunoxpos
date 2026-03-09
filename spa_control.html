@@ -12,23 +12,28 @@
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
 
-        /* Status Colors - Updated for better visibility */
+        /* Status Colors */
         .status-offline { background: #0f172a; border-color: #1e293b; opacity: 0.4; } 
         .status-standby { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); border-color: #3b82f6; } 
         .status-checkin { background: linear-gradient(135deg, #065f46 0%, #064e3b 100%); border-color: #10b981; } 
         .status-progress { background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%); border-color: #ef4444; } 
         
+        /* Pulse for Active Treatment */
+        .status-progress { animation: pulse-red 3s infinite; }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0px rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0px rgba(239, 68, 68, 0); }
+        }
+
         .warning-mode { animation: blink-warning 0.8s infinite; background: #b45309 !important; border-color: #f59e0b !important; }
-        @keyframes blink-warning { 0% { transform: scale(1); } 50% { transform: scale(0.98); opacity: 0.8; } 100% { transform: scale(1); } }
+        @keyframes blink-warning { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         
         .floor-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 1.2rem;
         }
-
-        .card-inner { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .card-inner:hover { transform: translateY(-5px); filter: brightness(1.2); }
     </style>
 </head>
 <body class="bg-[#020617] text-slate-100 min-h-screen">
@@ -36,70 +41,22 @@
     <header class="bg-slate-900/50 backdrop-blur-md p-5 border-b border-slate-800 sticky top-0 z-50 shadow-2xl">
         <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-2xl font-black italic tracking-tighter text-blue-500">SPA <span class="text-white underline decoration-blue-500">CONTROL</span></h1>
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em]">Real-time Therapist Monitor</p>
+                <h1 class="text-2xl font-black italic tracking-tighter text-blue-500">SPA <span class="text-white">CONTROL</span></h1>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Therapist Real-time Monitoring</p>
             </div>
             <div class="flex items-center gap-3">
                 <select id="active-outlet" onchange="fetchTherapists()" class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-xs font-black outline-none text-blue-400">
                     <option value="Delta">DELTA SPA</option>
                     <option value="Cabana">CABANA SPA</option>
                 </select>
-                <button onclick="openModal()" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-xl text-xs font-black transition shadow-lg shadow-blue-900/20">
-                    <i class="fa fa-user-edit mr-2"></i>MANUAL UPDATE
-                </button>
             </div>
         </div>
     </header>
 
     <main class="max-w-7xl mx-auto p-6">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div class="bg-slate-900/50 p-5 rounded-3xl border border-slate-800 border-b-4 border-b-blue-600">
-                <p class="text-slate-500 text-[10px] font-black uppercase">Therapist Standby</p>
-                <h2 id="count-standby" class="text-3xl font-black text-white">0</h2>
-            </div>
-            <div class="bg-slate-900/50 p-5 rounded-3xl border border-slate-800 border-b-4 border-b-red-600">
-                <p class="text-slate-500 text-[10px] font-black uppercase">In Treatment</p>
-                <h2 id="count-progress" class="text-3xl font-black text-white">0</h2>
-            </div>
-        </div>
-
         <div id="therapist-grid" class="floor-grid">
             </div>
     </main>
-
-    <div id="update-modal" class="fixed inset-0 bg-black/90 hidden z-[100] flex items-center justify-center p-4 backdrop-blur-md">
-        <div class="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] w-full max-w-md shadow-2xl">
-            <div class="flex justify-between items-center mb-8">
-                <h3 class="text-xl font-black uppercase italic">Therapist <span class="text-blue-500">Status</span></h3>
-                <button onclick="closeModal()" class="text-slate-500 hover:text-white text-2xl">&times;</button>
-            </div>
-            
-            <div class="space-y-6">
-                <div>
-                    <label class="text-[10px] font-black text-slate-500 uppercase ml-1">ID Therapist</label>
-                    <input type="text" id="target-tid" placeholder="CONTOH: T-01" class="w-full p-4 bg-slate-950 rounded-2xl border border-slate-800 outline-none font-black text-blue-400 uppercase focus:border-blue-500 transition-all">
-                </div>
-
-                <div class="grid grid-cols-3 gap-3">
-                    <button onclick="saveStatus('standby')" class="bg-blue-600 hover:bg-blue-500 p-4 rounded-2xl font-black text-[10px] uppercase transition-all">Standby</button>
-                    <button onclick="saveStatus('checkin')" class="bg-emerald-600 hover:bg-emerald-500 p-4 rounded-2xl font-black text-[10px] uppercase transition-all">Check In</button>
-                    <button onclick="saveStatus('offline')" class="bg-slate-700 hover:bg-slate-600 p-4 rounded-2xl font-black text-[10px] uppercase transition-all">Offline</button>
-                </div>
-
-                <div class="bg-slate-950 p-6 rounded-3xl border border-slate-800">
-                    <label class="text-[10px] font-black text-slate-500 block mb-3 uppercase tracking-widest">Manual Timer (Optional)</label>
-                    <div class="flex gap-3">
-                        <select id="target-duration" class="flex-1 p-3 bg-slate-900 rounded-xl border border-slate-700 outline-none font-bold text-sm text-white">
-                            <option value="60">60 Menit</option>
-                            <option value="90">90 Menit</option>
-                            <option value="120">120 Menit</option>
-                        </select>
-                        <button onclick="startMassage()" class="bg-red-600 px-6 py-3 rounded-xl font-black text-xs uppercase hover:bg-red-700 transition shadow-lg shadow-red-900/40">START</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <script>
         const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
@@ -108,6 +65,7 @@
 
         let therapists = [];
 
+        // 1. Fungsi Utama Mengambil Data
         async function fetchTherapists() {
             const outlet = document.getElementById('active-outlet').value;
             const { data, error } = await _supabase
@@ -122,113 +80,60 @@
             }
         }
 
+        // 2. Fungsi Render UI
         function renderFloorMap() {
             const grid = document.getElementById('therapist-grid');
             grid.innerHTML = '';
             
-            let sCount = 0; 
-            let pCount = 0;
-
             therapists.forEach(t => {
                 const now = new Date().getTime();
                 const endTime = t.end_time ? new Date(t.end_time).getTime() : null;
                 let isWarning = false;
                 let timerDisplay = t.status.toUpperCase();
 
-                if (t.status === 'progress') {
-                    pCount++;
-                    if (endTime) {
-                        const diff = endTime - now;
-                        if (diff > 0) {
-                            const mins = Math.floor(diff / 60000);
-                            const secs = Math.floor((diff % 60000) / 1000);
-                            timerDisplay = `${mins}:${secs < 10 ? '0'+secs : secs}`;
-                            if (mins < 10) isWarning = true;
-                        } else {
-                            timerDisplay = "SELESAI";
-                            // Kita panggil autoFinish hanya jika status masih progress di lokal
-                            // Ini menghindari loop update database
-                            handleExpiredTreatment(t.t_id);
-                        }
+                if (t.status === 'progress' && endTime) {
+                    const diff = endTime - now;
+                    if (diff > 0) {
+                        const mins = Math.floor(diff / 60000);
+                        const secs = Math.floor((diff % 60000) / 1000);
+                        timerDisplay = `${mins}:${secs < 10 ? '0'+secs : secs}`;
+                        if (mins < 10) isWarning = true;
+                    } else {
+                        timerDisplay = "SELESAI";
                     }
-                } else if (t.status === 'standby') {
-                    sCount++;
                 }
 
                 const card = document.createElement('div');
-                card.className = `card-inner status-${t.status} ${isWarning ? 'warning-mode' : ''} p-5 rounded-[2rem] border-b-4 shadow-2xl text-center`;
+                card.className = `status-${t.status} ${isWarning ? 'warning-mode' : ''} p-5 rounded-[2rem] border-b-4 shadow-xl text-center transition-all duration-500`;
                 card.innerHTML = `
-                    <p class="text-[9px] font-black opacity-40 uppercase tracking-widest mb-1">${t.t_id}</p>
-                    <h3 class="font-extrabold text-[13px] uppercase truncate tracking-tight">${t.name}</h3>
-                    <div class="mt-4 py-2 px-3 bg-black/30 rounded-2xl text-[13px] font-black font-mono">
+                    <p class="text-[9px] font-black opacity-40 uppercase mb-1">${t.t_id}</p>
+                    <h3 class="font-extrabold text-sm uppercase truncate">${t.name}</h3>
+                    <div class="mt-4 py-2 px-3 bg-black/30 rounded-2xl text-[12px] font-black font-mono">
                         ${timerDisplay}
                     </div>
                 `;
                 grid.appendChild(card);
             });
-
-            document.getElementById('count-standby').innerText = sCount;
-            document.getElementById('count-progress').innerText = pCount;
         }
 
-        async function handleExpiredTreatment(tid) {
-            // Hanya update jika waktu benar-benar habis agar status kembali biru
-            await _supabase.from('therapists').update({ status: 'standby', end_time: null }).eq('t_id', tid);
-            // fetchTherapists akan terpanggil otomatis via Realtime Subscription
-        }
-
-        async function saveStatus(status) {
-            const tid = document.getElementById('target-tid').value.toUpperCase();
-            if(!tid) return alert("Masukkan ID!");
-
-            const { error } = await _supabase
-                .from('therapists')
-                .update({ status: status, end_time: null })
-                .eq('t_id', tid);
-
-            if(!error) { 
-                closeModal(); 
-                fetchTherapists(); 
-            } else { 
-                alert("ID Therapist tidak ditemukan!"); 
-            }
-        }
-
-        async function startMassage() {
-            const tid = document.getElementById('target-tid').value.toUpperCase();
-            const duration = document.getElementById('target-duration').value;
-            const finishTime = new Date(new Date().getTime() + duration * 60000).toISOString();
-
-            const { error } = await _supabase
-                .from('therapists')
-                .update({ status: 'progress', end_time: finishTime })
-                .eq('t_id', tid);
-
-            if(!error) { closeModal(); fetchTherapists(); }
-        }
-
-        // --- SOLUSI UTAMA: REALTIME SYNC ---
-        // Mendengarkan SEMUA perubahan di tabel therapists, baik dari POS maupun dari sini
+        // 3. SINKRONISASI OTOMATIS (Mendengarkan Perubahan dari POS)
         _supabase
-            .channel('public:therapists')
+            .channel('db-changes')
             .on('postgres_changes', { 
-                event: '*', 
+                event: 'UPDATE', 
                 schema: 'public', 
                 table: 'therapists' 
             }, (payload) => {
-                console.log('Change received!', payload);
-                fetchTherapists(); // Ambil data terbaru secara instan
+                // Begitu ada update di tabel therapists (misal dari POS), langsung ambil data terbaru
+                console.log("Update terdeteksi:", payload.new);
+                fetchTherapists(); 
             })
             .subscribe();
 
-        // UI HELPERS
-        function openModal() { document.getElementById('update-modal').classList.remove('hidden'); }
-        function closeModal() { document.getElementById('update-modal').classList.add('hidden'); }
-        
-        // Refresh Timer UI secara lokal agar detik berjalan mulus
+        // 4. Timer Lokal (Hanya untuk mengupdate detik di layar)
         setInterval(renderFloorMap, 1000);
-        
-        // Load Data Awal
+
+        // Load awal
         fetchTherapists();
     </script>
 </body>
