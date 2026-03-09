@@ -3,82 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POS SPA VISUAL - LUNOX</title>
+    <title>POS SPA ROOM MAP - LUNOX</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .card-standby { border-top: 8px solid #3b82f6; background: white; }
-        .card-progress { border-top: 8px solid #ef4444; background: #fef2f2; opacity: 0.8; pointer-events: none; }
-        .card-checkin { border-top: 8px solid #10b981; background: #ecfdf5; }
+        .room-available { border: 2px solid #e2e8f0; background: white; color: #64748b; }
+        .room-occupied { border: 2px solid #ef4444; background: #fef2f2; color: #991b1b; }
+        .room-cleaning { border: 2px solid #eab308; background: #fefce8; color: #854d0e; }
         
-        .side-panel { transition: transform 0.3s ease-in-out; }
-        .panel-hidden { transform: translateX(100%); }
+        .modal-animate { animation: zoomIn 0.2s ease-out; }
+        @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-900 min-h-screen overflow-hidden">
+<body class="bg-slate-50 text-slate-900 min-h-screen">
 
-    <header class="bg-white p-4 shadow-sm flex justify-between items-center border-b">
+    <header class="bg-white p-4 shadow-sm flex justify-between items-center border-b sticky top-0 z-40">
         <div>
-            <h1 class="text-xl font-black text-slate-800 italic">LUNOX <span class="text-blue-600">POS SPA</span></h1>
-            <select id="active-outlet" onchange="loadVisualMap()" class="text-[10px] font-black uppercase text-slate-400 bg-transparent outline-none">
+            <h1 class="text-xl font-black text-slate-800 italic uppercase">Spa <span class="text-blue-600">Floor Map</span></h1>
+            <p id="outlet-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Loading...</p>
+        </div>
+        <div class="flex gap-4 items-center">
+            <select id="active-outlet" onchange="loadRoomMap()" class="bg-slate-100 border-none rounded-lg px-3 py-1 text-xs font-bold outline-none">
                 <option value="Delta">DELTA SPA</option>
                 <option value="Cabana">CABANA SPA</option>
             </select>
-        </div>
-        <div class="flex items-center gap-4">
-            <div id="clock" class="text-sm font-mono font-bold bg-slate-100 px-3 py-1 rounded-lg text-slate-600">00:00:00</div>
-            <button onclick="location.reload()" class="text-slate-400 hover:text-red-500"><i class="fa fa-sync-alt"></i></button>
+            <div id="clock" class="text-sm font-mono font-bold text-blue-600">00:00:00</div>
         </div>
     </header>
 
-    <main class="p-6 h-[calc(100vh-80px)] overflow-y-auto">
-        <div id="visual-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+    <main class="p-6">
+        <div id="room-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
             </div>
     </main>
 
-    <div id="side-panel" class="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl z-50 side-panel panel-hidden border-l border-slate-200">
-        <div class="h-full flex flex-col">
-            <div class="p-6 bg-blue-600 text-white flex justify-between items-center">
+    <div id="pos-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden modal-animate">
+            <div class="bg-slate-900 p-6 text-white flex justify-between items-center">
                 <div>
-                    <h2 id="selected-t-name" class="text-xl font-black uppercase">THERAPIST NAME</h2>
-                    <p id="selected-t-id" class="text-xs font-bold opacity-80 uppercase tracking-widest">ID: T-01</p>
+                    <h2 id="modal-room-name" class="text-2xl font-black italic">ROOM 01</h2>
+                    <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Input New Transaction</p>
                 </div>
-                <button onclick="closePanel()" class="text-2xl">&times;</button>
+                <button onclick="closeModal()" class="text-2xl hover:text-red-500 transition">&times;</button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">Pilih Layanan Utama</label>
-                    <select id="input-service" class="w-full p-4 bg-slate-100 rounded-2xl border-none outline-none font-bold text-slate-700">
-                        <option value="Traditional" data-dur="60">Traditional Massage (60m)</option>
-                        <option value="Shiatsu" data-dur="90">Shiatsu Massage (90m)</option>
-                        <option value="Signature" data-dur="120">Signature Ritual (120m)</option>
-                    </select>
-                </div>
+            <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">Pilih Therapist</label>
+                        <select id="input-therapist" class="w-full p-4 bg-slate-100 rounded-2xl border-none font-bold text-blue-600 outline-none">
+                            <option value="">-- Loading Therapist --</option>
+                        </select>
+                    </div>
 
-                <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">Additional (Add-on)</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <label class="flex items-center p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-blue-50">
-                            <input type="checkbox" name="extra" value="Ear Candle" class="mr-2"> <span class="text-xs font-bold">Ear Candle</span>
-                        </label>
-                        <label class="flex items-center p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-blue-50">
-                            <input type="checkbox" name="extra" value="Scrub" class="mr-2"> <span class="text-xs font-bold">Body Scrub</span>
-                        </label>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">Service Utama</label>
+                        <select id="input-service" class="w-full p-4 bg-slate-100 rounded-2xl border-none font-bold outline-none">
+                            <option value="Massage VIP" data-dur="60">Massage VIP (60m)</option>
+                            <option value="Luxury Spa" data-dur="90">Luxury Spa (90m)</option>
+                            <option value="Royal Treatment" data-dur="120">Royal Treatment (120m)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">Additional Service</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 text-sm font-bold text-slate-600">
+                                <input type="checkbox" name="extra" value="Scrub" class="w-4 h-4"> Body Scrub
+                            </label>
+                            <label class="flex items-center gap-2 text-sm font-bold text-slate-600">
+                                <input type="checkbox" name="extra" value="Ear Candle" class="w-4 h-4"> Ear Candle
+                            </label>
+                        </div>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">F&B Order</label>
-                    <input type="text" id="input-fnb" placeholder="Contoh: Wedang Jahe, Jus Apel..." class="w-full p-4 bg-slate-100 rounded-2xl border-none outline-none font-bold text-sm">
-                </div>
-            </div>
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">F&B Order</label>
+                        <textarea id="input-fnb" placeholder="Contoh: Wedang Jahe, Jus Jeruk..." class="w-full p-4 bg-slate-100 rounded-2xl border-none font-bold text-sm h-32 outline-none resize-none"></textarea>
+                    </div>
 
-            <div class="p-6 border-t bg-slate-50">
-                <button onclick="submitTransaction()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black shadow-lg transition-all flex justify-center items-center gap-3">
-                    <i class="fa fa-play-circle"></i> CHECK-IN & START TIMER
-                </button>
+                    <div class="pt-4">
+                        <button onclick="submitOrder()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-3xl font-black shadow-lg shadow-blue-200 transition-all flex justify-center items-center gap-3 uppercase italic">
+                            <i class="fa fa-play"></i> Start Session
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -88,102 +99,106 @@
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-        let selectedTherapistId = null;
+        let activeRoomId = null;
 
-        // LOAD MAP VISUAL (Kartu)
-        async function loadVisualMap() {
+        // LOAD MAP BERDASARKAN RUANGAN
+        async function loadRoomMap() {
             const outlet = document.getElementById('active-outlet').value;
-            const { data } = await _supabase.from('therapists').select('*').eq('outlet_name', outlet).order('t_id');
+            document.getElementById('outlet-label').innerText = `${outlet} Management`;
             
-            const grid = document.getElementById('visual-grid');
+            const { data: rooms } = await _supabase.from('rooms').select('*').eq('outlet_name', outlet).order('name');
+            const grid = document.getElementById('room-grid');
             grid.innerHTML = '';
 
-            data.forEach(t => {
-                const isBusy = t.status === 'progress';
+            rooms.forEach(room => {
+                const isOccupied = room.status === 'occupied';
                 const card = document.createElement('div');
-                card.className = `card-${t.status} p-4 rounded-2xl shadow-sm cursor-pointer hover:shadow-md transition-all relative overflow-hidden`;
-                card.onclick = () => isBusy ? null : openPanel(t);
+                card.className = `room-${room.status} p-8 rounded-[2rem] shadow-sm cursor-pointer hover:shadow-xl transition-all flex flex-col items-center justify-center text-center relative overflow-hidden`;
+                card.onclick = () => isOccupied ? null : openModal(room);
 
                 card.innerHTML = `
-                    <div class="flex justify-between items-start mb-4">
-                        <span class="text-[9px] font-black text-slate-400 uppercase">${t.t_id}</span>
-                        <div class="h-2 w-2 rounded-full ${isBusy ? 'bg-red-500 animate-pulse' : 'bg-blue-500'}"></div>
-                    </div>
-                    <h3 class="font-black text-sm uppercase truncate">${t.name}</h3>
-                    <p class="text-[8px] font-bold text-slate-400 mt-1 uppercase">${t.status}</p>
-                    ${isBusy ? '<div class="mt-2 py-1 bg-red-100 text-red-600 text-[9px] font-black rounded text-center">ON SERVICE</div>' : ''}
+                    <i class="fa ${isOccupied ? 'fa-user-lock' : 'fa-door-open'} text-2xl mb-3 opacity-20"></i>
+                    <h3 class="font-black text-lg uppercase italic tracking-tighter">${room.name}</h3>
+                    <p class="text-[9px] font-black uppercase mt-1 opacity-60">${room.status}</p>
+                    ${isOccupied ? '<div class="absolute inset-0 bg-red-600/10 backdrop-blur-[1px]"></div>' : ''}
                 `;
                 grid.appendChild(card);
             });
         }
 
-        // PANEL CONTROL
-        function openPanel(therapist) {
-            selectedTherapistId = therapist.t_id;
-            document.getElementById('selected-t-name').innerText = therapist.name;
-            document.getElementById('selected-t-id').innerText = `ID: ${therapist.t_id}`;
-            document.getElementById('side-panel').classList.remove('panel-hidden');
+        // AMBIL DATA THERAPIST STANDBY
+        async function loadTherapistDropdown() {
+            const outlet = document.getElementById('active-outlet').value;
+            const { data } = await _supabase.from('therapists').select('t_id, name').eq('outlet_name', outlet).eq('status', 'standby');
+            
+            const select = document.getElementById('input-therapist');
+            select.innerHTML = '<option value="">-- Pilih Therapist --</option>';
+            data.forEach(t => {
+                select.innerHTML += `<option value="${t.t_id}">${t.t_id} - ${t.name}</option>`;
+            });
         }
 
-        function closePanel() {
-            document.getElementById('side-panel').classList.add('panel-hidden');
-            // Reset form
-            document.querySelectorAll('input[name="extra"]').forEach(c => c.checked = false);
+        // MODAL CONTROL
+        function openModal(room) {
+            activeRoomId = room.id;
+            document.getElementById('modal-room-name').innerText = room.name;
+            document.getElementById('pos-modal').classList.remove('hidden');
+            loadTherapistDropdown();
+        }
+
+        function closeModal() {
+            document.getElementById('pos-modal').classList.add('hidden');
             document.getElementById('input-fnb').value = '';
         }
 
         // SUBMIT TRANSAKSI
-        async function submitTransaction() {
+        async function submitOrder() {
+            const tid = document.getElementById('input-therapist').value;
             const serviceSelect = document.getElementById('input-service');
             const duration = parseInt(serviceSelect.options[serviceSelect.selectedIndex].dataset.dur);
-            const serviceName = serviceSelect.value;
-            const fnb = document.getElementById('input-fnb').value;
+            const outlet = document.getElementById('active-outlet').value;
             
-            // Ambil extra service
-            let extras = [];
-            document.querySelectorAll('input[name="extra"]:checked').forEach(c => extras.push(c.value));
+            if (!tid) return alert("Pilih Therapist!");
 
-            // 1. Hitung Timer
             const finishTime = new Date(new Date().getTime() + duration * 60000).toISOString();
 
-            // 2. Update Database (Therapist Status)
-            const { error } = await _supabase
-                .from('therapists')
-                .update({ 
-                    status: 'progress', 
-                    end_time: finishTime 
-                })
-                .eq('t_id', selectedTherapistId);
+            // 1. Update Ruangan jadi Occupied
+            await _supabase.from('rooms').update({ 
+                status: 'occupied', 
+                therapist_id: tid,
+                end_time: finishTime 
+            }).eq('id', activeRoomId);
 
-            if (!error) {
-                // 3. Masukkan ke tabel Laporan (Orders)
-                await _supabase.from('orders').insert([{
-                    product_name: `Massage: ${serviceName} + ${extras.join(', ')}`,
-                    qty: 1,
-                    status: 'completed',
-                    outlet_name: document.getElementById('active-outlet').value,
-                    staff_id: selectedTherapistId // Menyimpan ID therapist di kolom staff
-                }]);
+            // 2. Update Therapist jadi Progress
+            await _supabase.from('therapists').update({ 
+                status: 'progress', 
+                end_time: finishTime 
+            }).eq('t_id', tid);
 
-                alert(`Transaksi Berhasil! ${selectedTherapistId} Mulai Massage.`);
-                closePanel();
-                loadVisualMap();
-            }
+            // 3. Simpan Pesanan (Log Reports)
+            await _supabase.from('orders').insert([{
+                product_name: `SPA: ${serviceSelect.value} (Room: ${document.getElementById('modal-room-name').innerText})`,
+                qty: 1,
+                status: 'completed',
+                outlet_name: outlet,
+                staff_id: tid
+            }]);
+
+            alert("Transaksi Berhasil! Room & Therapist Terkunci.");
+            closeModal();
+            loadRoomMap();
         }
 
-        // REALTIME CLOCK
+        // REALTIME & CLOCK
         setInterval(() => {
             document.getElementById('clock').innerText = new Date().toLocaleTimeString('id-ID');
         }, 1000);
 
-        // INITIAL LOAD
-        loadVisualMap();
-
-        // REALTIME SYNC (Jika ada perubahan status dari admin, kasir langsung melihat perubahannya)
-        _supabase.channel('pos_sync').on('postgres_changes', { event: '*', schema: 'public', table: 'therapists' }, () => {
-            loadVisualMap();
+        _supabase.channel('room_sync').on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, () => {
+            loadRoomMap();
         }).subscribe();
 
+        loadRoomMap();
     </script>
 </body>
 </html>
