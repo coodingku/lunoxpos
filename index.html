@@ -94,7 +94,6 @@
     </aside>
 
     <main class="flex-1 overflow-y-auto relative">
-        
         <div id="page-rooms" class="p-6 lg:p-10 page-content">
             <div class="flex justify-between items-end mb-8">
                 <div>
@@ -227,7 +226,6 @@
                 </table>
             </div>
         </div>
-
     </main>
 
     <script>
@@ -239,8 +237,9 @@
         let closingData = { total: 0, items: [], totalQty: 0 };
 
         async function init() {
+            // Live Update
             _supabase.channel('pos_updates')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
                     renderRooms();
                     if(activeRoom) refreshRoomBill();
                 }).subscribe();
@@ -278,6 +277,7 @@
         }
 
         async function renderRooms() {
+            // Cek room yang ada orderan belum bayar
             const { data: activeOrders } = await _supabase.from('orders').select('room_id').neq('status', 'paid');
             const occupiedRoomIds = activeOrders ? [...new Set(activeOrders.map(o => o.room_id))] : [];
 
@@ -315,7 +315,7 @@
                 listEl.innerHTML = bills.map(b => {
                     total += b.price;
                     return `<div class="flex justify-between items-center text-[11px] bg-white p-4 rounded-2xl border border-gray-100 font-bold shadow-sm">
-                        <div class="flex flex-col"><span class="uppercase text-slate-800">${b.product_name}</span></div>
+                        <span class="uppercase text-slate-800">${b.product_name}</span>
                         <span class="text-blue-600">Rp ${b.price.toLocaleString()}</span>
                     </div>`;
                 }).join('');
@@ -361,6 +361,7 @@
             }]);
 
             if(!error) {
+                // Print Slip Order
                 document.getElementById('p-title').innerText = "ORDER SLIP";
                 document.getElementById('p-outlet-title').innerText = selectedOutlet.name;
                 document.getElementById('p-date').innerText = new Date().toLocaleString();
@@ -369,9 +370,14 @@
                 document.getElementById('p-items-list').innerHTML = `<b>${currentOrderProduct.name}</b> x 1`;
                 document.getElementById('p-total-section').style.display = "none";
                 window.print();
+                
+                // Reset UI
                 currentOrderProduct = null;
                 document.getElementById('new-item-selected').classList.add('hidden');
                 document.querySelectorAll('.selected-card').forEach(c => c.classList.remove('selected-card'));
+                refreshRoomBill();
+            } else {
+                alert("Gagal simpan: " + error.message);
             }
         }
 
@@ -379,12 +385,16 @@
             if(!activeRoom) return;
             if(!confirm(`Selesaikan transaksi untuk ${activeRoom.name}?`)) return;
 
+            // Ambil data untuk struk final
             const { data: finalBills } = await _supabase.from('orders').select('*, staff(name)').eq('room_id', activeRoom.id).neq('status', 'paid');
             if (!finalBills || finalBills.length === 0) return;
 
             printFinalReceipt(finalBills);
 
-            await _supabase.from('orders').update({ status: 'paid' }).eq('room_id', activeRoom.id).neq('status', 'paid');
+            // Update status ke paid
+            const { error } = await _supabase.from('orders').update({ status: 'paid' }).eq('room_id', activeRoom.id).neq('status', 'paid');
+            if(error) alert("Error update status: " + error.message);
+            
             showPage('rooms');
         }
 
@@ -410,7 +420,7 @@
             today.setHours(0,0,0,0);
             document.getElementById('closing-date-label').innerText = `Laporan: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}`;
 
-            const { data, error } = await _supabase.from('orders')
+            const { data } = await _supabase.from('orders')
                 .select('*')
                 .eq('outlet_id', selectedOutlet.id)
                 .eq('status', 'paid')
@@ -467,7 +477,7 @@
             const activeBtn = document.getElementById(`menu-${page}`);
             if(activeBtn) activeBtn.classList.add('active-menu');
 
-            if(page === 'rooms') { activeRoom = null; renderRooms(); }
+            if(page === 'rooms') renderRooms();
             if(page === 'dashboard') loadHistory();
             if(page === 'closing') loadClosingReport();
         }
