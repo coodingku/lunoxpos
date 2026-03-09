@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUNOX - PRODUCT & TAX SETTINGS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f1f5f9; }
+    </style>
+</head>
+<body class="p-6">
+
+    <div class="max-w-6xl mx-auto">
+        <div class="flex flex-col md:flex-row gap-6">
+            
+            <div class="w-full md:w-80">
+                <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-200">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center">
+                            <i class="fa fa-percentage"></i>
+                        </div>
+                        <h2 class="font-black uppercase italic text-slate-800 tracking-tighter">Tax & Service</h2>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-[10px] font-black text-slate-400 uppercase ml-1">PPN (%)</label>
+                            <input type="number" id="tax-ppn" value="11" class="w-full p-4 bg-slate-50 rounded-2xl border-none ring-2 ring-slate-100 focus:ring-blue-500 outline-none font-bold text-slate-700">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-slate-400 uppercase ml-1">Service Charge (%)</label>
+                            <input type="number" id="tax-service" value="5" class="w-full p-4 bg-slate-50 rounded-2xl border-none ring-2 ring-slate-100 focus:ring-blue-500 outline-none font-bold text-slate-700">
+                        </div>
+                        <button onclick="updateTaxSettings()" class="w-full bg-slate-800 text-white py-4 rounded-2xl font-black uppercase text-xs hover:bg-black transition shadow-lg shadow-slate-200">Update Pajak</button>
+                    </div>
+                    
+                    <div class="mt-8 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                        <p class="text-[10px] text-blue-600 font-bold leading-relaxed">
+                            <i class="fa fa-info-circle mr-1"></i> Pajak ini akan otomatis ditambahkan pada perhitungan akhir di struk pembayaran (Checkout).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1">
+                <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-8 border-b flex justify-between items-center bg-slate-50/50">
+                        <h2 class="text-xl font-black uppercase italic tracking-tighter text-slate-800">Master Produk</h2>
+                        <button onclick="openAddModal()" class="bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-lg shadow-blue-200 hover:bg-blue-700 transition">+ Tambah Produk</button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                                <tr>
+                                    <th class="p-6">Produk</th>
+                                    <th class="p-6">Outlet</th>
+                                    <th class="p-6">Harga</th>
+                                    <th class="p-6">Stok</th>
+                                    <th class="p-6 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="product-list" class="divide-y divide-slate-100 font-bold text-slate-600">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-product" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl">
+            <h3 class="text-xl font-black uppercase italic mb-6">Detail Produk</h3>
+            <div class="space-y-4">
+                <input type="text" id="p-name" placeholder="Nama Produk" class="w-full p-4 bg-slate-50 rounded-2xl border-none ring-2 ring-slate-100 focus:ring-blue-500 outline-none font-bold">
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="number" id="p-price" placeholder="Harga" class="w-full p-4 bg-slate-50 rounded-2xl border-none ring-2 ring-slate-100 focus:ring-blue-500 outline-none font-bold">
+                    <input type="number" id="p-stock" placeholder="Stok" class="w-full p-4 bg-slate-50 rounded-2xl border-none ring-2 ring-slate-100 focus:ring-blue-500 outline-none font-bold">
+                </div>
+                <select id="p-outlet" class="w-full p-4 bg-slate-50 rounded-2xl border-none ring-2 ring-slate-100 outline-none font-bold text-blue-600">
+                    <option value="Delta">DELTA SPA</option>
+                    <option value="Cabana">CABANA SPA</option>
+                </select>
+                <div class="flex gap-4 pt-4">
+                    <button onclick="closeModal()" class="flex-1 py-4 font-black text-slate-400 uppercase text-xs">Batal</button>
+                    <button onclick="saveProduct()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-black uppercase text-xs shadow-lg">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        async function init() {
+            loadProducts();
+            loadTax();
+        }
+
+        async function loadProducts() {
+            const { data } = await _supabase.from('produk').select('*').order('nama_produk');
+            if(data) {
+                document.getElementById('product-list').innerHTML = data.map(p => `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-6">
+                            <div class="text-slate-800">${p.nama_produk}</div>
+                            <div class="text-[9px] text-slate-400 uppercase">ID: ${p.id}</div>
+                        </td>
+                        <td class="p-6 text-xs text-blue-600 font-black">${p.outlet_name}</td>
+                        <td class="p-6">Rp ${parseInt(p.harga).toLocaleString()}</td>
+                        <td class="p-6"><span class="${p.stok < 10 ? 'text-red-500' : 'text-slate-600'}">${p.stok}</span></td>
+                        <td class="p-6 text-center">
+                            <button onclick="deleteProduct(${p.id})" class="text-slate-300 hover:text-red-500 transition"><i class="fa fa-trash-alt"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function saveProduct() {
+            const name = document.getElementById('p-name').value;
+            const price = document.getElementById('p-price').value;
+            const stock = document.getElementById('p-stock').value;
+            const outlet = document.getElementById('p-outlet').value;
+
+            if(!name || !price) return alert("Isi data dengan lengkap!");
+
+            const { error } = await _supabase.from('produk').insert([{
+                nama_produk: name, harga: price, stok: stock, outlet_name: outlet
+            }]);
+
+            if(!error) { closeModal(); loadProducts(); }
+            else alert("Gagal simpan produk");
+        }
+
+        async function loadTax() {
+            // Kita asumsikan ada tabel 'settings' untuk simpan pajak
+            const { data } = await _supabase.from('settings').select('*').eq('key', 'tax_config').single();
+            if(data) {
+                document.getElementById('tax-ppn').value = data.value.ppn;
+                document.getElementById('tax-service').value = data.value.service;
+            }
+        }
+
+        async function updateTaxSettings() {
+            const ppn = document.getElementById('tax-ppn').value;
+            const service = document.getElementById('tax-service').value;
+
+            const { error } = await _supabase.from('settings').upsert({
+                key: 'tax_config',
+                value: { ppn: ppn, service: service }
+            });
+
+            if(!error) alert("Pajak Berhasil Diperbarui!");
+        }
+
+        function openAddModal() { document.getElementById('modal-product').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('modal-product').classList.add('hidden'); }
+        
+        async function deleteProduct(id) {
+            if(confirm('Hapus produk ini?')) {
+                await _supabase.from('produk').delete().eq('id', id);
+                loadProducts();
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
