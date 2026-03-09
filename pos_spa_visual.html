@@ -66,7 +66,7 @@
                                 <i class="fa fa-spa opacity-30"></i>
                             </button>
                         </div>
-                        <button onclick="startSession()" class="w-full bg-blue-600 text-white py-5 mt-4 rounded-2xl font-black uppercase italic shadow-lg hover:bg-blue-700 transition">Mulai Massage</button>
+                        <button id="btn-start-massage" onclick="startSession()" class="w-full bg-blue-600 text-white py-5 mt-4 rounded-2xl font-black uppercase italic shadow-lg hover:bg-blue-700 transition">Mulai Massage</button>
                     </div>
 
                     <div class="bg-slate-50 p-6 rounded-[2.5rem] border-2 border-dashed border-slate-200">
@@ -127,6 +127,10 @@
                         <option value="0">0%</option>
                     </select>
                 </div>
+                <div id="tax-details" class="space-y-1 text-[10px] text-slate-400 font-bold uppercase border-t pt-2">
+                    <div class="flex justify-between"><span>Service (5%)</span><span id="p-service">0</span></div>
+                    <div class="flex justify-between"><span>PPN (11%)</span><span id="p-ppn">0</span></div>
+                </div>
                 <div class="pt-6 border-t-2 border-dashed flex justify-between items-center font-black">
                     <span class="text-slate-800 text-lg uppercase">Total Akhir</span>
                     <span id="p-grand-total" class="text-4xl text-blue-600 tracking-tighter">0</span>
@@ -157,9 +161,15 @@
     <div id="thermal-receipt" class="hidden font-mono text-[10px] w-[58mm] bg-white text-black p-2">
         <div class="text-center font-bold text-xs mb-1 italic">LUNOX SPA</div>
         <div id="r-outlet" class="text-center mb-2 uppercase text-[8px]">---</div>
+        <div id="r-date" class="text-center mb-2 text-[7px]">---</div>
         <div class="border-b border-dashed mb-2"></div>
         <div id="r-items-list" class="space-y-1 mb-2"></div>
-        <div class="border-t border-dashed pt-2 flex justify-between font-bold text-xs"><span>TOTAL</span><span id="r-total"></span></div>
+        <div class="border-t border-dashed pt-2 space-y-1">
+            <div class="flex justify-between"><span>SUBTOTAL</span><span id="r-subtotal"></span></div>
+            <div class="flex justify-between"><span>TAX & SERV</span><span id="r-tax"></span></div>
+            <div class="flex justify-between font-bold text-xs"><span>TOTAL</span><span id="r-total"></span></div>
+        </div>
+        <div class="text-center mt-4 text-[7px]">TERIMA KASIH ATAS KUNJUNGANNYA</div>
     </div>
 
     <script>
@@ -188,13 +198,15 @@
 
         async function loadMasterData() {
             const out = document.getElementById('active-outlet').value;
-            const { data: tps } = await _supabase.from('therapists').select('*').eq('outlet_name', out).eq('status', 'standby');
+            const { data: tps } = await _supabase.from('therapists').select('*').eq('outlet_name', out);
             masterTherapists = tps || [];
+            
             masterServices = [
                 {id:'S1', name:'Traditional Massage', price:250000, dur:60},
                 {id:'S2', name:'Shiatsu Massage', price:350000, dur:90},
                 {id:'S3', name:'Body Scrub', price:200000, dur:45}
             ];
+            
             const { data: pd } = await _supabase.from('produk').select('*').eq('outlet_name', out);
             masterProducts = pd || [];
         }
@@ -221,12 +233,22 @@
             });
         }
 
-        // --- FUNGSI PICKER ---
+        // --- PICKER LOGIC ---
         function openPicker(type) {
             selectedPicker.type = type;
             const body = document.getElementById('picker-table-body'); 
             body.innerHTML = '';
-            let data = (type === 'therapist' || type === 'therapist_seller') ? masterTherapists : (type === 'service' ? masterServices : masterProducts);
+            
+            let data = [];
+            if (type === 'therapist') {
+                data = masterTherapists.filter(t => t.status === 'standby');
+            } else if (type === 'therapist_seller') {
+                data = masterTherapists;
+            } else if (type === 'service') {
+                data = masterServices;
+            } else {
+                data = masterProducts;
+            }
 
             data.forEach(item => {
                 const tr = document.createElement('tr');
@@ -246,14 +268,13 @@
         }
 
         function closePicker() { document.getElementById('picker-modal').classList.add('hidden'); }
-
         function filterPicker() {
             const val = document.getElementById('picker-search').value.toLowerCase();
             const rows = document.querySelectorAll('#picker-table-body tr');
             rows.forEach(r => r.style.display = r.innerText.toLowerCase().includes(val) ? '' : 'none');
         }
 
-        // --- FUNGSI MODAL & BILL ---
+        // --- MODAL & BILL ---
         function openModal(r) { 
             currentRoom = r; 
             selectedSellerId = null; 
@@ -263,6 +284,17 @@
             document.getElementById('label-service').innerText = "Pilih Layanan...";
             document.getElementById('label-seller').innerText = "Pilih Staff Penjual...";
             document.getElementById('label-product').innerText = "Cari Item...";
+            
+            // Toggle Button Start Massage
+            const btnStart = document.getElementById('btn-start-massage');
+            if(r.status === 'occupied') {
+                btnStart.classList.add('opacity-50', 'pointer-events-none');
+                btnStart.innerText = "Massage In Progress";
+            } else {
+                btnStart.classList.remove('opacity-50', 'pointer-events-none');
+                btnStart.innerText = "Mulai Massage";
+            }
+
             document.getElementById('pos-modal').classList.remove('hidden'); 
             fetchActiveBill(r.id);
         }
@@ -324,7 +356,7 @@
             closeModal(); init();
         }
 
-        // --- PAYMENT & ABSENSI ---
+        // --- PAYMENT ---
         function openPaymentModal() { 
             if(activeOrders.length === 0) return alert("Bill kosong!"); 
             document.getElementById('payment-modal').classList.remove('hidden'); 
@@ -332,51 +364,62 @@
         }
         function closePaymentModal() { document.getElementById('payment-modal').classList.add('hidden'); }
 
-     // Ganti fungsi calculateTotal lama dengan ini di file pos_spa_visual.html
-async function calculateTotal() {
-    const sub = activeOrders.reduce((a, b) => a + (b.harga_satuan * b.qty), 0);
-    const discPercent = parseFloat(document.getElementById('db-discount').value) || 0;
-    
-    // Ambil setting pajak (bisa hardcode atau ambil dari db)
-    const ppnPercent = 11; // Ambil dari input di inventory.html jika ingin dinamis
-    const servicePercent = 5;
+        async function calculateTotal() {
+            const sub = activeOrders.reduce((a, b) => a + (b.harga_satuan * b.qty), 0);
+            const discPercent = parseFloat(document.getElementById('db-discount').value) || 0;
+            
+            const ppnPercent = 11;
+            const servicePercent = 5;
 
-    const discountAmount = sub * (discPercent / 100);
-    const afterDiscount = sub - discountAmount;
-    
-    const serviceAmount = afterDiscount * (servicePercent / 100);
-    const ppnAmount = (afterDiscount + serviceAmount) * (ppnPercent / 100);
-    
-    const grandTotal = afterDiscount + serviceAmount + ppnAmount;
+            const discountAmount = sub * (discPercent / 100);
+            const afterDiscount = sub - discountAmount;
+            
+            const serviceAmount = afterDiscount * (servicePercent / 100);
+            const ppnAmount = (afterDiscount + serviceAmount) * (ppnPercent / 100);
+            
+            const grandTotal = Math.round(afterDiscount + serviceAmount + ppnAmount);
 
-    // Tampilkan di UI Payment Modal
-    document.getElementById('p-subtotal').innerText = `Rp ${sub.toLocaleString()}`;
-    document.getElementById('p-grand-total').innerText = `Rp ${Math.round(grandTotal).toLocaleString()}`;
-    
-    return { 
-        sub: sub, 
-        discount: discountAmount, 
-        service: serviceAmount, 
-        ppn: ppnAmount, 
-        grand: Math.round(grandTotal) 
-    };
-}
+            document.getElementById('p-subtotal').innerText = `Rp ${sub.toLocaleString()}`;
+            document.getElementById('p-service').innerText = `Rp ${Math.round(serviceAmount).toLocaleString()}`;
+            document.getElementById('p-ppn').innerText = `Rp ${Math.round(ppnAmount).toLocaleString()}`;
+            document.getElementById('p-grand-total').innerText = `Rp ${grandTotal.toLocaleString()}`;
+            
+            return { sub, discountAmount, serviceAmount, ppnAmount, grandTotal };
+        }
 
         async function processCheckout() {
-            const calc = calculateTotal();
+            const totals = await calculateTotal();
             const pay = document.getElementById('db-payment-method').value;
-            await _supabase.from('transaksi_spa').update({ status_bayar: 'completed', total_bayar: calc.grand, payment_method: pay, checkout_at: new Date() }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
+            const outlet = document.getElementById('active-outlet').value;
+
+            // Simpan Transaksi
+            await _supabase.from('transaksi_spa').update({ 
+                status_bayar: 'completed', 
+                total_bayar: totals.grandTotal, 
+                payment_method: pay, 
+                checkout_at: new Date() 
+            }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
+
+            // Bebaskan Room & Therapist
             await _supabase.from('rooms').update({ status: 'available', therapist_id: null, end_time: null }).eq('id', currentRoom.id);
-            
-            // Refresh struk
-            document.getElementById('r-outlet').innerText = document.getElementById('active-outlet').value;
-            document.getElementById('r-items-list').innerHTML = activeOrders.map(i => `<div>${i.nama_item} x${i.qty} - ${(i.harga_satuan*i.qty).toLocaleString()}</div>`).join('');
-            document.getElementById('r-total').innerText = calc.grand.toLocaleString();
+            if(currentRoom.therapist_id) {
+                await _supabase.from('therapists').update({ status: 'standby', end_time: null }).eq('t_id', currentRoom.therapist_id);
+            }
+
+            // Update Struk
+            document.getElementById('r-outlet').innerText = outlet;
+            document.getElementById('r-date').innerText = new Date().toLocaleString('id-ID');
+            document.getElementById('r-items-list').innerHTML = activeOrders.map(i => `
+                <div class="flex justify-between"><span>${i.nama_item} x${i.qty}</span><span>${(i.harga_satuan*i.qty).toLocaleString()}</span></div>`).join('');
+            document.getElementById('r-subtotal').innerText = totals.sub.toLocaleString();
+            document.getElementById('r-tax').innerText = (totals.serviceAmount + totals.ppnAmount).toLocaleString();
+            document.getElementById('r-total').innerText = totals.grandTotal.toLocaleString();
 
             window.print();
             closePaymentModal(); closeModal(); init();
         }
 
+        // --- ABSENSI ---
         function openAttendanceModal() { document.getElementById('modal-attendance').classList.remove('hidden'); document.getElementById('staff-id-input').focus(); }
         function closeAttendanceModal() { document.getElementById('modal-attendance').classList.add('hidden'); document.getElementById('staff-id-input').value = ''; }
 
