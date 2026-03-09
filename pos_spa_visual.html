@@ -196,35 +196,17 @@
             if(bk) document.getElementById('db-payment-method').innerHTML = '<option value="CASH">CASH</option>' + bk.map(b => `<option value="${b.name}">${b.name}</option>`).join('');
         }
 
-     async function loadMasterData() {
-    const out = document.getElementById('active-outlet').value;
-
-    // 1. Load Therapists
-    const { data: tps } = await _supabase.from('therapists').select('*').eq('outlet_name', out);
-    masterTherapists = tps || [];
-    
-    // 2. PERBAIKAN: Ambil dari Tabel 'services' (Bukan hardcoded lagi)
-    const { data: svc, error: svcError } = await _supabase
-        .from('services')
-        .select('*')
-        .eq('outlet_name', out) // Filter berdasarkan outlet aktif
-        .order('name', { ascending: true });
-
-    if (svcError) {
-        console.error("Gagal memuat Services:", svcError);
-        masterServices = [];
-    } else {
-        masterServices = svc;
-    }
-    
-    // 3. Load Products
-    const { data: pd } = await _supabase.from('produk').select('*').eq('outlet_name', out);
-    masterProducts = pd || [];
-
-    // Setelah data dimuat, panggil fungsi render menu jika ada
-    renderServiceMenu(); 
-    renderProductMenu();
-}
+        async function loadMasterData() {
+            const out = document.getElementById('active-outlet').value;
+            const { data: tps } = await _supabase.from('therapists').select('*').eq('outlet_name', out);
+            masterTherapists = tps || [];
+            
+            const { data: svc } = await _supabase.from('services').select('*').eq('outlet_name', out).order('name');
+            masterServices = svc || [];
+            
+            const { data: pd } = await _supabase.from('produk').select('*').eq('outlet_name', out);
+            masterProducts = pd || [];
+        }
 
         async function loadRoomMap() {
             const out = document.getElementById('active-outlet').value;
@@ -248,7 +230,6 @@
             });
         }
 
-        // --- PICKER LOGIC ---
         function openPicker(type) {
             selectedPicker.type = type;
             const body = document.getElementById('picker-table-body'); 
@@ -269,13 +250,35 @@
                 const tr = document.createElement('tr');
                 tr.className = "border-b hover:bg-blue-50 cursor-pointer";
                 tr.onclick = () => {
-                    if(type === 'therapist') { selectedPicker.tId = item.t_id; document.getElementById('label-therapist').innerText = item.name; }
-                    if(type === 'therapist_seller') { selectedSellerId = item.t_id; document.getElementById('label-seller').innerText = "Penjual: " + item.name; }
-                    if(type === 'service') { selectedPicker.sName = item.name; selectedPicker.sPrice = item.price; selectedPicker.sDur = item.dur; document.getElementById('label-service').innerText = item.name; }
-                    if(type === 'product') { selectedPicker.pName = item.nama_produk || item.name; selectedPicker.pPrice = item.harga || item.price; document.getElementById('label-product').innerText = item.nama_produk || item.name; }
+                    const itemName = item.name || item.nama_produk;
+                    const itemPrice = item.price || item.harga;
+                    
+                    if(type === 'therapist') { 
+                        selectedPicker.tId = item.t_id; 
+                        document.getElementById('label-therapist').innerText = item.name; 
+                    }
+                    if(type === 'therapist_seller') { 
+                        selectedSellerId = item.t_id; 
+                        document.getElementById('label-seller').innerText = "Penjual: " + item.name; 
+                    }
+                    if(type === 'service') { 
+                        selectedPicker.sName = item.name; 
+                        selectedPicker.sPrice = item.price; 
+                        selectedPicker.sDur = item.dur || 60;
+                        selectedPicker.comType = item.commission_type || 'percentage';
+                        selectedPicker.comValue = item.commission_value || 0;
+                        document.getElementById('label-service').innerText = item.name; 
+                    }
+                    if(type === 'product') { 
+                        selectedPicker.pName = itemName; 
+                        selectedPicker.pPrice = itemPrice; 
+                        selectedPicker.comType = item.commission_type || 'percentage';
+                        selectedPicker.comValue = item.commission_value || 0;
+                        document.getElementById('label-product').innerText = itemName; 
+                    }
                     closePicker();
                 };
-                tr.innerHTML = `<td class="p-5 uppercase">${item.name || item.nama_produk}</td><td class="p-5 text-right font-black">${item.price ? 'Rp '+item.price.toLocaleString() : (item.harga ? 'Rp '+item.harga.toLocaleString() : '')}</td>`;
+                tr.innerHTML = `<td class="p-5 uppercase">${item.name || item.nama_produk}</td><td class="p-5 text-right font-black">${(item.price || item.harga || 0).toLocaleString()}</td>`;
                 body.appendChild(tr);
             });
             document.getElementById('picker-title').innerText = type.replace('_', ' ').toUpperCase();
@@ -289,7 +292,6 @@
             rows.forEach(r => r.style.display = r.innerText.toLowerCase().includes(val) ? '' : 'none');
         }
 
-        // --- MODAL & BILL ---
         function openModal(r) { 
             currentRoom = r; 
             selectedSellerId = null; 
@@ -300,7 +302,6 @@
             document.getElementById('label-seller').innerText = "Pilih Staff Penjual...";
             document.getElementById('label-product').innerText = "Cari Item...";
             
-            // Toggle Button Start Massage
             const btnStart = document.getElementById('btn-start-massage');
             if(r.status === 'occupied') {
                 btnStart.classList.add('opacity-50', 'pointer-events-none');
@@ -340,7 +341,9 @@
                 qty: parseInt(document.getElementById('input-qty').value), 
                 status_bayar: 'pending', 
                 outlet_name: document.getElementById('active-outlet').value, 
-                therapist_id: selectedSellerId 
+                therapist_id: selectedSellerId,
+                commission_type: selectedPicker.comType,
+                commission_value: selectedPicker.comValue
             }]);
             fetchActiveBill(currentRoom.id);
             document.getElementById('label-product').innerText = "Cari Item...";
@@ -366,12 +369,13 @@
                 qty: 1, 
                 status_bayar: 'pending', 
                 outlet_name: document.getElementById('active-outlet').value, 
-                therapist_id: selectedPicker.tId 
+                therapist_id: selectedPicker.tId,
+                commission_type: selectedPicker.comType,
+                commission_value: selectedPicker.comValue
             }]);
             closeModal(); init();
         }
 
-        // --- PAYMENT ---
         function openPaymentModal() { 
             if(activeOrders.length === 0) return alert("Bill kosong!"); 
             document.getElementById('payment-modal').classList.remove('hidden'); 
@@ -379,102 +383,62 @@
         }
         function closePaymentModal() { document.getElementById('payment-modal').classList.add('hidden'); }
 
-       async function calculateTotal() {
-    const sub = activeOrders.reduce((a, b) => a + (b.harga_satuan * b.qty), 0);
-    const discPercent = parseFloat(document.getElementById('db-discount').value) || 0;
-    
-    // --- PERBAIKAN DI SINI: Ambil dari Database ---
-    const { data: settings } = await _supabase
-        .from('settings')
-        .select('*')
-        .eq('key', 'tax_config')
-        .maybeSingle();
+        async function calculateTotal() {
+            const sub = activeOrders.reduce((a, b) => a + (b.harga_satuan * b.qty), 0);
+            const discPercent = parseFloat(document.getElementById('db-discount').value) || 0;
+            
+            // Mengambil setting pajak secara dinamis jika ada tabel settings
+            const { data: set } = await _supabase.from('settings').select('*').eq('key', 'tax_config').maybeSingle();
+            const ppnPercent = set ? set.ppn : 11; 
+            const servicePercent = set ? set.service : 5;
 
-    // Jika di setting 0, maka variabel ini akan bernilai 0
-    const ppnPercent = settings ? settings.ppn : 0; 
-    const servicePercent = settings ? settings.service : 0;
+            const discountAmount = sub * (discPercent / 100);
+            const afterDiscount = sub - discountAmount;
+            const serviceAmount = afterDiscount * (servicePercent / 100);
+            const ppnAmount = (afterDiscount + serviceAmount) * (ppnPercent / 100);
+            const grandTotal = Math.round(afterDiscount + serviceAmount + ppnAmount);
 
-    const discountAmount = sub * (discPercent / 100);
-    const afterDiscount = sub - discountAmount;
-    
-    const serviceAmount = afterDiscount * (servicePercent / 100);
-    const ppnAmount = (afterDiscount + serviceAmount) * (ppnPercent / 100);
-    
-    const grandTotal = Math.round(afterDiscount + serviceAmount + ppnAmount);
-
-    // Update Tampilan Modal
-    document.getElementById('p-subtotal').innerText = `Rp ${sub.toLocaleString()}`;
-    
-    // Sembunyikan baris jika nilainya 0 agar tampilan bersih
-    const taxDetailDiv = document.getElementById('tax-details');
-    if (ppnPercent === 0 && servicePercent === 0) {
-        taxDetailDiv.classList.add('hidden');
-    } else {
-        taxDetailDiv.classList.remove('hidden');
-        document.getElementById('p-service').innerText = `Rp ${Math.round(serviceAmount).toLocaleString()}`;
-        document.getElementById('p-ppn').innerText = `Rp ${Math.round(ppnAmount).toLocaleString()}`;
-    }
-
-    document.getElementById('p-grand-total').innerText = `Rp ${grandTotal.toLocaleString()}`;
-    
-    return { sub, discountAmount, serviceAmount, ppnAmount, grandTotal };
-}
+            document.getElementById('p-subtotal').innerText = `Rp ${sub.toLocaleString()}`;
+            document.getElementById('p-service').innerText = `Rp ${Math.round(serviceAmount).toLocaleString()}`;
+            document.getElementById('p-ppn').innerText = `Rp ${Math.round(ppnAmount).toLocaleString()}`;
+            document.getElementById('p-grand-total').innerText = `Rp ${grandTotal.toLocaleString()}`;
+            
+            return { sub, discountAmount, serviceAmount, ppnAmount, grandTotal };
+        }
         
-  async function processCheckout() {
-    const totals = await calculateTotal();
-    const pay = document.getElementById('db-payment-method').value;
-    const outlet = document.getElementById('active-outlet').value;
+        async function processCheckout() {
+            const totals = await calculateTotal();
+            const pay = document.getElementById('db-payment-method').value;
+            const outlet = document.getElementById('active-outlet').value;
 
-    // 1. Ambil data room terbaru dari database untuk mendapatkan therapist_id yang benar
-    const { data: latestRoomData } = await _supabase
-        .from('rooms')
-        .select('therapist_id')
-        .eq('id', currentRoom.id)
-        .single();
+            // Bebaskan Therapist & Room
+            const { data: rData } = await _supabase.from('rooms').select('therapist_id').eq('id', currentRoom.id).single();
+            if(rData && rData.therapist_id) {
+                await _supabase.from('therapists').update({ status: 'standby', end_time: null }).eq('t_id', rData.therapist_id);
+            }
 
-    const actualTherapistId = latestRoomData ? latestRoomData.therapist_id : null;
+            await _supabase.from('transaksi_spa').update({ 
+                status_bayar: 'completed', 
+                total_bayar: totals.grandTotal, 
+                payment_method: pay, 
+                checkout_at: new Date() 
+            }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
 
-    // 2. Simpan Transaksi
-    await _supabase.from('transaksi_spa').update({ 
-        status_bayar: 'completed', 
-        total_bayar: totals.grandTotal, 
-        payment_method: pay, 
-        checkout_at: new Date() 
-    }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
+            await _supabase.from('rooms').update({ status: 'available', therapist_id: null, end_time: null }).eq('id', currentRoom.id);
 
-    // 3. Bebaskan Room
-    await _supabase.from('rooms').update({ 
-        status: 'available', 
-        therapist_id: null, 
-        end_time: null 
-    }).eq('id', currentRoom.id);
+            // Struk
+            document.getElementById('r-outlet').innerText = outlet;
+            document.getElementById('r-date').innerText = new Date().toLocaleString('id-ID');
+            document.getElementById('r-items-list').innerHTML = activeOrders.map(i => `
+                <div class="flex justify-between"><span>${i.nama_item} x${i.qty}</span><span>${(i.harga_satuan*i.qty).toLocaleString()}</span></div>`).join('');
+            document.getElementById('r-subtotal').innerText = totals.sub.toLocaleString();
+            document.getElementById('r-tax').innerText = (totals.serviceAmount + totals.ppnAmount).toLocaleString();
+            document.getElementById('r-total').innerText = totals.grandTotal.toLocaleString();
 
-    // 4. Bebaskan Therapist (Menggunakan ID yang baru saja diambil dari DB)
-    if (actualTherapistId) {
-        await _supabase.from('therapists')
-            .update({ status: 'standby', end_time: null })
-            .eq('t_id', actualTherapistId);
-        
-        console.log("Therapist " + actualTherapistId + " set to standby.");
-    }
+            window.print();
+            closePaymentModal(); closeModal(); init();
+        }
 
-    // 5. Update Tampilan Struk
-    document.getElementById('r-outlet').innerText = outlet;
-    document.getElementById('r-date').innerText = new Date().toLocaleString('id-ID');
-    document.getElementById('r-items-list').innerHTML = activeOrders.map(i => `
-        <div class="flex justify-between"><span>${i.nama_item} x${i.qty}</span><span>${(i.harga_satuan*i.qty).toLocaleString()}</span></div>`).join('');
-    document.getElementById('r-subtotal').innerText = totals.sub.toLocaleString();
-    document.getElementById('r-tax').innerText = (totals.serviceAmount + totals.ppnAmount).toLocaleString();
-    document.getElementById('r-total').innerText = totals.grandTotal.toLocaleString();
-
-    // 6. Cetak dan Selesai
-    window.print();
-    closePaymentModal(); 
-    closeModal(); 
-    init(); // Memicu loadRoomMap() untuk memperbarui tampilan grid
-}
-
-        // --- ABSENSI ---
         function openAttendanceModal() { document.getElementById('modal-attendance').classList.remove('hidden'); document.getElementById('staff-id-input').focus(); }
         function closeAttendanceModal() { document.getElementById('modal-attendance').classList.add('hidden'); document.getElementById('staff-id-input').value = ''; }
 
