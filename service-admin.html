@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUNOX - Service Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8fafc; }
+    </style>
+</head>
+<body class="p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-10">
+            <div>
+                <h1 class="text-3xl font-black italic tracking-tighter text-slate-800 uppercase">Input <span class="text-blue-600">Service</span></h1>
+                <p class="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Manajemen Menu Layanan SPA</p>
+            </div>
+            <button onclick="openModal()" class="bg-slate-900 text-white px-8 py-4 rounded-[2rem] font-black text-xs uppercase shadow-xl hover:bg-blue-600 transition-all">
+                + Tambah Layanan
+            </button>
+        </header>
+
+        <div class="bg-white rounded-[3rem] shadow-sm border border-slate-100 overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
+                        <th class="p-6 text-center w-20">ID</th>
+                        <th class="p-6">Nama Layanan</th>
+                        <th class="p-6">Harga</th>
+                        <th class="p-6">Outlet</th>
+                        <th class="p-6 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="service-table" class="font-bold text-slate-700 text-sm">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="service-modal" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl">
+            <h3 id="modal-title" class="text-2xl font-black text-slate-800 mb-8 uppercase italic">Add Service</h3>
+            <div class="space-y-5">
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Nama Layanan</label>
+                    <input type="text" id="s-name" placeholder="Misal: Traditional Massage" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Harga (Rp)</label>
+                    <input type="number" id="s-price" placeholder="250000" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-xl outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Pilih Outlet</label>
+                    <select id="s-outlet" class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none appearance-none">
+                        <option value="Delta">DELTA SPA</option>
+                        <option value="Cabana">CABANA SPA</option>
+                    </select>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button onclick="closeModal()" class="flex-1 py-5 font-black text-slate-400 uppercase text-xs">Batal</button>
+                    <button onclick="saveService()" class="flex-1 bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-lg hover:bg-black transition-all">Simpan Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
+        const _supabase = supabase.createClient(SB_URL, SB_KEY);
+
+        let editingId = null;
+
+        async function loadServices() {
+            const table = document.getElementById('service-table');
+            const { data, error } = await _supabase.from('services').select('*').order('name');
+
+            if (data) {
+                table.innerHTML = data.map(s => `
+                    <tr class="border-b hover:bg-slate-50 transition">
+                        <td class="p-6 text-center text-slate-300 font-normal">#${s.id}</td>
+                        <td class="p-6 uppercase tracking-tight">${s.name}</td>
+                        <td class="p-6 text-blue-600">Rp ${s.price.toLocaleString()}</td>
+                        <td class="p-6 font-normal text-slate-400">${s.outlet_name}</td>
+                        <td class="p-6 text-center space-x-2">
+                            <button onclick="editService(${s.id}, '${s.name}', ${s.price}, '${s.outlet_name}')" class="text-slate-400 hover:text-blue-600 transition"><i class="fa fa-pen"></i></button>
+                            <button onclick="deleteService(${s.id})" class="text-slate-400 hover:text-red-500 transition"><i class="fa fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function saveService() {
+            const name = document.getElementById('s-name').value;
+            const price = document.getElementById('s-price').value;
+            const outlet = document.getElementById('s-outlet').value;
+
+            if(!name || !price) return alert("Lengkapi data!");
+
+            const payload = { name, price: parseFloat(price), outlet_name: outlet };
+
+            if (editingId) {
+                await _supabase.from('services').update(payload).eq('id', editingId);
+            } else {
+                await _supabase.from('services').insert([payload]);
+            }
+
+            closeModal();
+            loadServices();
+        }
+
+        function editService(id, name, price, outlet) {
+            editingId = id;
+            document.getElementById('modal-title').innerText = "Edit Service";
+            document.getElementById('s-name').value = name;
+            document.getElementById('s-price').value = price;
+            document.getElementById('s-outlet').value = outlet;
+            document.getElementById('service-modal').classList.remove('hidden');
+        }
+
+        async function deleteService(id) {
+            if(confirm('Hapus layanan ini?')) {
+                await _supabase.from('services').delete().eq('id', id);
+                loadServices();
+            }
+        }
+
+        function openModal() {
+            editingId = null;
+            document.getElementById('modal-title').innerText = "Add Service";
+            document.getElementById('s-name').value = '';
+            document.getElementById('s-price').value = '';
+            document.getElementById('service-modal').classList.remove('hidden');
+        }
+
+        function closeModal() { document.getElementById('service-modal').classList.add('hidden'); }
+
+        loadServices();
+    </script>
+</body>
+</html>
