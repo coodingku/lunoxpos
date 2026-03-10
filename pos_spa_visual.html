@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUNOX POS v2.2 - MANAGER AUTH</title>
+    <title>LUNOX POS v2.3 - FIXED</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -16,7 +16,7 @@
         .room-overtime { background: #000000; color: #ff0000; }
         .room-checkedout { background: #a855f7; color: white; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        @media print { .no-print { display: none; } body { background: white; } }
+        @media print { .no-print { display: none !important; } body { background: white; } }
     </style>
 </head>
 <body class="min-h-screen">
@@ -76,15 +76,11 @@
                         </div>
                     </div>
 
-                    <div id="extra-time-panel" class="hidden bg-amber-50 p-6 rounded-[2.5rem] border-2 border-amber-200 animate-pulse-once">
-                        <h4 class="text-amber-800 font-black mb-4 uppercase italic">Form Tambah Waktu (Extra Time)</h4>
+                    <div id="extra-time-panel" class="hidden bg-amber-50 p-6 rounded-[2.5rem] border-2 border-amber-200">
+                        <h4 class="text-amber-800 font-black mb-4 uppercase italic">Form Extra Time</h4>
                         <div class="grid grid-cols-2 gap-4 mb-4">
-                            <button onclick="openPicker('therapist_extra')" class="p-4 bg-white border-2 rounded-2xl font-bold text-amber-600 text-left flex justify-between items-center">
-                                <span id="label-therapist-extra">Pilih Therapist...</span>
-                            </button>
-                            <button onclick="openPicker('service_extra')" class="p-4 bg-white border-2 rounded-2xl font-bold text-amber-600 text-left flex justify-between items-center">
-                                <span id="label-service-extra">Pilih Service...</span>
-                            </button>
+                            <button onclick="openPicker('therapist_extra')" class="p-4 bg-white border-2 rounded-2xl font-bold text-amber-600 text-left flex justify-between items-center"><span id="label-therapist-extra">Pilih Therapist...</span></button>
+                            <button onclick="openPicker('service_extra')" class="p-4 bg-white border-2 rounded-2xl font-bold text-amber-600 text-left flex justify-between items-center"><span id="label-service-extra">Pilih Service...</span></button>
                         </div>
                         <button onclick="processExtraTime()" class="w-full bg-amber-600 text-white py-4 rounded-2xl font-black uppercase italic">Konfirmasi Extra Time</button>
                     </div>
@@ -97,12 +93,9 @@
                                 <i class="fa fa-search opacity-30"></i>
                             </button>
                             <div class="flex gap-3">
-                                <button onclick="openPicker('product')" class="flex-1 p-5 bg-white border-2 rounded-2xl font-bold text-left flex justify-between items-center">
-                                    <span id="label-product">Cari Item...</span>
-                                    <i class="fa fa-search opacity-30"></i>
-                                </button>
-                                <input type="number" id="input-qty" value="1" min="1" class="w-20 p-5 bg-white border-2 rounded-2xl font-black text-center outline-none focus:border-blue-500">
-                                <button onclick="addToBill()" class="bg-emerald-500 text-white px-8 rounded-2xl font-black hover:bg-emerald-600 transition"><i class="fa fa-plus"></i></button>
+                                <button onclick="openPicker('product')" class="flex-1 p-5 bg-white border-2 rounded-2xl font-bold text-left flex justify-between items-center"><span id="label-product">Cari Item...</span></button>
+                                <input type="number" id="input-qty" value="1" min="1" class="w-20 p-5 bg-white border-2 rounded-2xl font-black text-center outline-none">
+                                <button onclick="addToBill()" class="bg-emerald-500 text-white px-8 rounded-2xl font-black"><i class="fa fa-plus"></i></button>
                             </div>
                         </div>
                     </div>
@@ -111,13 +104,13 @@
 
             <div class="w-full md:w-[420px] bg-slate-50 p-10 flex flex-col border-l border-slate-200">
                 <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Current Bill</h3>
-                <div id="bill-items" class="flex-1 overflow-y-auto space-y-4 pr-2"></div>
+                <div id="bill-items" class="flex-1 overflow-y-auto space-y-4"></div>
                 <div class="border-t-4 border-slate-900 pt-6 mt-6">
                     <div class="flex justify-between items-center mb-4 px-2">
                         <span class="text-xs font-black text-slate-400 uppercase">Total Items</span>
                         <span id="grand-total" class="text-3xl font-black text-blue-600">Rp 0</span>
                     </div>
-                    <button onclick="openPaymentModal()" class="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black uppercase hover:bg-blue-600 transition shadow-xl">Bayar Sekarang</button>
+                    <button onclick="openPaymentModal()" class="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black uppercase shadow-xl">Bayar Sekarang</button>
                 </div>
             </div>
         </div>
@@ -127,13 +120,9 @@
         <div class="bg-white w-full max-w-5xl rounded-[3.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row h-[85vh]">
             <div class="flex-1 p-10 bg-slate-50 border-r border-slate-200 overflow-y-auto">
                 <h3 class="text-xs font-black text-slate-400 mb-8 tracking-widest uppercase">Checkout Summary</h3>
-                <div id="payment-bill-list" class="space-y-4 mb-10 px-2"></div>
-                
+                <div id="payment-bill-list" class="space-y-4 mb-10"></div>
                 <div class="border-t-2 border-slate-200 pt-8 space-y-3 px-2">
                     <div class="flex justify-between text-slate-500 font-bold"><span>Subtotal</span><span id="pay-subtotal">Rp 0</span></div>
-                    <div class="flex justify-between text-slate-500 font-bold"><span>Service (<span id="label-svc-pct">0</span>%)</span><span id="pay-service">+ Rp 0</span></div>
-                    <div class="flex justify-between text-red-500 font-bold"><span>Discount (<span id="label-disc-pct">0</span>%)</span><span id="pay-discount">- Rp 0</span></div>
-                    <div class="flex justify-between text-slate-500 font-bold"><span>PPN (<span id="label-ppn-pct">0</span>%)</span><span id="pay-ppn">+ Rp 0</span></div>
                     <div class="border-t-4 border-slate-900 mt-6 pt-6 flex justify-between text-4xl font-black italic tracking-tighter">
                         <span>TOTAL BILL</span>
                         <span id="pay-grand-total" class="text-blue-600">Rp 0</span>
@@ -145,37 +134,35 @@
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase block mb-4 tracking-widest">Metode Pembayaran</label>
                     <div id="payment-methods-grid" class="grid grid-cols-3 gap-2 mb-10">
-                        <button onclick="setMethod('CASH')" id="btn-cash" class="pay-method-btn p-5 border-2 rounded-2xl font-bold bg-blue-600 text-white border-blue-600 shadow-lg">CASH</button>
+                        <button onclick="setMethod('CASH')" id="btn-cash" class="pay-method-btn p-5 border-2 rounded-2xl font-bold bg-blue-600 text-white border-blue-600">CASH</button>
                     </div>
-
                     <label class="text-[10px] font-black text-slate-400 uppercase block mb-2 tracking-widest">Uang Diterima</label>
-                    <input type="number" id="input-pay-amount" oninput="calcChange()" class="w-full text-5xl font-black outline-none border-b-4 border-slate-100 pb-3 mb-8 focus:border-blue-500" placeholder="0">
-                    
+                    <input type="number" id="input-pay-amount" oninput="calcChange()" class="w-full text-5xl font-black outline-none border-b-4 border-slate-100 pb-3 mb-8" placeholder="0">
                     <div class="bg-emerald-50 p-8 rounded-[2rem] border-2 border-emerald-100">
                         <span class="text-[10px] font-black text-emerald-600 block mb-1 uppercase tracking-widest">Kembalian</span>
                         <span id="label-change" class="text-4xl font-black text-emerald-700">Rp 0</span>
                     </div>
                 </div>
-
                 <div class="flex gap-4 mt-8">
-                    <button onclick="document.getElementById('payment-modal').classList.add('hidden')" class="flex-1 py-6 font-black text-slate-400 uppercase hover:text-red-500 transition">Batal</button>
-                    <button onclick="finalizePayment()" class="flex-[2] bg-blue-600 text-white py-6 rounded-3xl font-black text-xl uppercase italic shadow-2xl hover:bg-blue-700 transition">Proses Bayar</button>
+                    <button onclick="document.getElementById('payment-modal').classList.add('hidden')" class="flex-1 py-6 font-black text-slate-400 uppercase">Batal</button>
+                    <button onclick="finalizePayment()" class="flex-[2] bg-blue-600 text-white py-6 rounded-3xl font-black text-xl uppercase italic">Proses Bayar</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="picker-modal" class="fixed inset-0 bg-black/60 hidden z-[120] flex items-center justify-center p-4 backdrop-blur-sm no-print">
+    <div id="picker-modal" class="fixed inset-0 bg-black/60 hidden z-[120] flex items-center justify-center p-4 no-print">
         <div class="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl flex flex-col h-[75vh] overflow-hidden">
             <div class="p-8 border-b">
-                <div class="flex justify-between items-center mb-6"><h3 id="picker-title" class="text-xl font-black uppercase">Pilih Data</h3><button onclick="closePicker()" class="text-slate-300 hover:text-red-500 text-4xl">&times;</button></div>
-                <input type="text" id="picker-search" oninput="filterPickerData()" placeholder="Cari..." class="w-full bg-slate-100 p-4 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500">
+                <div class="flex justify-between items-center mb-6"><h3 id="picker-title" class="text-xl font-black uppercase">Pilih Data</h3><button onclick="closePicker()" class="text-slate-300 text-4xl">&times;</button></div>
+                <input type="text" id="picker-search" oninput="filterPickerData()" placeholder="Cari..." class="w-full bg-slate-100 p-4 rounded-2xl font-bold outline-none">
             </div>
             <div class="flex-1 overflow-y-auto p-6"><table class="w-full"><tbody id="picker-table-body" class="font-bold divide-y divide-slate-100"></tbody></table></div>
         </div>
     </div>
 
     <script>
+        // -- CONFIG --
         const SB_URL = "https://mbzoydcehhvjdqfefflo.supabase.co"; 
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
@@ -183,8 +170,7 @@
         let currentRoom = null, activeOrders = [], masterTherapists = [], masterServices = [], masterProducts = [];
         let pickerCurrentData = [], selectedPicker = {}, selectedSellerId = null, selectedStaffHandleId = null;
         let selectedExtra = { tId: null, sName: null, sPrice: 0, sDur: 0 };
-        let currentPaymentMethod = 'CASH', currentTotalBill = 0, selectedBankId = null;
-        let taxRate = 0, discRate = 0, serviceRate = 0, finalAmountToPay = 0;
+        let currentPaymentMethod = 'CASH', currentTotalBill = 0, selectedBankId = null, finalAmountToPay = 0;
 
         async function init() {
             await loadMasterData();
@@ -195,30 +181,25 @@
 
         async function loadMasterData() {
             const out = document.getElementById('active-outlet').value;
-            const { data: config } = await _supabase.from('settings').select('*').limit(1).single();
-            if (config) { taxRate = config.ppn || 0; serviceRate = config.service || 0; discRate = config.discount || 0; }
-            
             const { data: tps } = await _supabase.from('therapists').select('*').eq('outlet_name', out);
             masterTherapists = tps || [];
             const { data: svc } = await _supabase.from('services').select('*').eq('outlet_name', out);
             masterServices = svc || [];
             const { data: pd } = await _supabase.from('produk').select('*').eq('outlet_name', out);
             masterProducts = pd || [];
-            
-            const { data: banks } = await _supabase.from('banks').select('*').eq('is_active', true);
-            renderBankButtons(banks || []);
+            const { data: bnks } = await _supabase.from('banks').select('*').eq('is_active', true);
+            renderBankButtons(bnks || []);
         }
 
         function renderBankButtons(banks) {
             const container = document.getElementById('payment-methods-grid');
-            if(!container) return;
-            container.innerHTML = `<button onclick="setMethod('CASH')" id="btn-cash" class="pay-method-btn p-5 border-2 rounded-2xl font-bold bg-blue-600 text-white border-blue-600 shadow-lg">CASH</button>`;
-            banks.forEach(bank => {
+            container.innerHTML = `<button onclick="setMethod('CASH')" id="btn-cash" class="pay-method-btn p-5 border-2 rounded-2xl font-bold bg-blue-600 text-white border-blue-600">CASH</button>`;
+            banks.forEach(b => {
                 const btn = document.createElement('button');
-                btn.id = `btn-${bank.name.toLowerCase().replace(/\s/g, '')}`;
+                btn.id = `btn-${b.name.toLowerCase().replace(/\s/g, '')}`;
                 btn.className = "pay-method-btn p-5 border-2 rounded-2xl font-bold border-slate-200 text-slate-400";
-                btn.innerText = bank.name.toUpperCase();
-                btn.onclick = () => { setMethod(bank.name.toUpperCase()); selectedBankId = bank.id; };
+                btn.innerText = b.name.toUpperCase();
+                btn.onclick = () => { setMethod(b.name.toUpperCase()); selectedBankId = b.id; };
                 container.appendChild(btn);
             });
         }
@@ -229,15 +210,14 @@
             const grid = document.getElementById('room-grid'); 
             if(!grid) return;
             grid.innerHTML = '';
-            (rooms || []).forEach(r => {
+            rooms.forEach(r => {
                 let statusClass = 'room-standby', timeLabel = 'READY';
                 if (r.status === 'occupied' && r.end_time) {
                     const diff = Math.floor((new Date(r.end_time) - new Date()) / 60000);
                     if (diff <= 0) { statusClass = 'room-overtime'; timeLabel = 'TIME OVER'; }
                     else if (diff <= 10) { statusClass = 'room-warning'; timeLabel = diff + 'm Left'; }
                     else { statusClass = 'room-progress'; timeLabel = diff + 'm Left'; }
-                } else if (r.status === 'checked_out') { statusClass = 'room-checkedout'; timeLabel = 'WAITING BILL'; }
-                
+                } else if (r.status === 'checked_out') { statusClass = 'room-checkedout'; timeLabel = 'BILLING'; }
                 const card = document.createElement('div');
                 card.className = `${statusClass} p-8 rounded-[2.5rem] text-center shadow-xl cursor-pointer transform hover:-translate-y-1 transition`;
                 card.onclick = () => openModal(r);
@@ -246,106 +226,16 @@
             });
         }
 
-        // --- AUTH MANAGER ---
-        async function verifyManager() {
-            const user = prompt("ID Manager / Username:");
-            const pass = prompt("Password Manager:");
-            if(!user || !pass) return false;
-
-            const { data, error } = await _supabase.from('user')
-                .select('*')
-                .eq('username', user)
-                .eq('password_id', pass)
-                .eq('role', 'manager')
-                .eq('is_active', true)
-                .single();
-
-            if (error || !data) { alert("Akses Ditolak: Hanya Manager yang dapat menghapus item."); return false; }
-            return true;
-        }
-
-        async function cancelItem(id) {
-            const isAuthorized = await verifyManager();
-            if (!isAuthorized) return;
-
-            const { error } = await _supabase.from('transaksi_spa').delete().eq('id', id);
-            if(error) alert("Gagal hapus: " + error.message);
-            else fetchActiveBill(currentRoom.id);
-        }
-
-        // --- EXTRA TIME ---
-        function toggleExtraTimeSection() {
-            const panel = document.getElementById('extra-time-panel');
-            panel.classList.toggle('hidden');
-            selectedExtra = { tId: null, sName: null, sPrice: 0, sDur: 0 };
-            document.getElementById('label-therapist-extra').innerText = "Pilih Therapist...";
-            document.getElementById('label-service-extra').innerText = "Pilih Service...";
-        }
-
-        async function processExtraTime() {
-            if(!selectedExtra.tId || !selectedExtra.sName) return alert("Pilih Therapist & Service!");
-            
-            const baseTime = (new Date(currentRoom.end_time) > new Date()) ? new Date(currentRoom.end_time) : new Date();
-            const newEnd = new Date(baseTime.getTime() + (selectedExtra.sDur * 60000)).toISOString();
-
-            await _supabase.from('rooms').update({ end_time: newEnd }).eq('id', currentRoom.id);
-            await _supabase.from('transaksi_spa').insert([{ 
-                room_id: currentRoom.id, 
-                nama_item: "[EXT] " + selectedExtra.sName, 
-                harga_satuan: selectedExtra.sPrice, 
-                qty: 1, 
-                status_bayar: 'pending', 
-                therapist_id: selectedExtra.tId, 
-                outlet_name: document.getElementById('active-outlet').value 
-            }]);
-
-            alert("Extra Time Ditambahkan!");
-            toggleExtraTimeSection();
-            fetchActiveBill(currentRoom.id);
-            loadRoomMap();
-        }
-
-        // --- PRINT & ADD PRODUCT ---
-        async function addToBill() {
-            if(!selectedPicker.pName || !selectedSellerId) return alert("Pilih Produk & Staff!");
-            const qty = parseInt(document.getElementById('input-qty').value);
-
-            const { error } = await _supabase.from('transaksi_spa').insert([{ 
-                room_id: currentRoom.id, 
-                nama_item: selectedPicker.pName, 
-                harga_satuan: selectedPicker.pPrice, 
-                qty: qty, 
-                status_bayar: 'pending', 
-                therapist_id: selectedSellerId, 
-                outlet_name: document.getElementById('active-outlet').value 
-            }]);
-
-            if(!error) {
-                window.print(); // Auto Print Dialog
-                fetchActiveBill(currentRoom.id);
-            } else {
-                alert("Gagal: " + error.message);
-            }
-        }
-
-        // --- LOGIKA MODAL & PICKER ---
         async function openModal(r) {
             currentRoom = r;
             document.getElementById('modal-room-name').innerText = r.name;
             document.getElementById('pos-modal').classList.remove('hidden');
             document.getElementById('extra-time-panel').classList.add('hidden');
-            const isOcc = (r.status === 'occupied');
-            const isCO = (r.status === 'checked_out');
+            const isOcc = (r.status === 'occupied'), isCO = (r.status === 'checked_out');
             document.getElementById('btn-start-massage').classList.toggle('hidden', isOcc || isCO);
             document.getElementById('btn-checkout-room').classList.toggle('hidden', !isOcc);
             document.getElementById('btn-extra-time').classList.toggle('hidden', !isOcc);
             fetchActiveBill(r.id);
-        }
-
-        async function checkoutRoom() {
-            if(!confirm("Hentikan massage?")) return;
-            await _supabase.from('rooms').update({ status: 'checked_out' }).eq('id', currentRoom.id);
-            closeModal(); loadRoomMap();
         }
 
         async function fetchActiveBill(roomId) {
@@ -357,44 +247,61 @@
                 total += sub;
                 return `<div class="bg-white p-5 rounded-3xl border-2 flex justify-between items-center shadow-sm">
                     <div><div class="text-[10px] font-black uppercase">${i.nama_item} x${i.qty}</div><div class="text-[10px] text-slate-400 font-bold">Rp ${sub.toLocaleString()}</div></div>
-                    <button onclick="cancelItem(${i.id})" class="text-red-300 hover:text-red-500 p-2 transition"><i class="fa fa-trash-alt"></i></button>
+                    <button onclick="cancelItem(${i.id})" class="text-red-300 hover:text-red-500 p-2"><i class="fa fa-trash-alt"></i></button>
                 </div>`;
             }).join('');
             currentTotalBill = total;
             document.getElementById('grand-total').innerText = `Rp ${total.toLocaleString()}`;
         }
 
-        function openPaymentModal() {
-            if (activeOrders.length === 0) return alert("Bill kosong!");
-            const subtotal = currentTotalBill;
-            const serviceAmount = subtotal * (serviceRate / 100);
-            const discountAmount = (subtotal + serviceAmount) * (discRate / 100);
-            const taxAmount = (subtotal + serviceAmount - discountAmount) * (taxRate / 100);
-            finalAmountToPay = (subtotal + serviceAmount - discountAmount) + taxAmount;
+        async function cancelItem(id) {
+            const user = prompt("ID Manager:"); const pass = prompt("Password Manager:");
+            const { data: auth } = await _supabase.from('user').select('*').eq('username', user).eq('password_id', pass).eq('role', 'manager').single();
+            if(!auth) return alert("Akses Ditolak!");
+            await _supabase.from('transaksi_spa').delete().eq('id', id);
+            fetchActiveBill(currentRoom.id);
+        }
 
-            document.getElementById('pay-subtotal').innerText = `Rp ${subtotal.toLocaleString()}`;
-            document.getElementById('pay-service').innerText = `+ Rp ${serviceAmount.toLocaleString()}`;
-            document.getElementById('pay-discount').innerText = `- Rp ${discountAmount.toLocaleString()}`;
-            document.getElementById('pay-ppn').innerText = `+ Rp ${taxAmount.toLocaleString()}`;
-            document.getElementById('pay-grand-total').innerText = `Rp ${finalAmountToPay.toLocaleString()}`;
-            document.getElementById('payment-modal').classList.remove('hidden');
+        function toggleExtraTimeSection() {
+            document.getElementById('extra-time-panel').classList.toggle('hidden');
+        }
+
+        async function processExtraTime() {
+            if(!selectedExtra.tId || !selectedExtra.sName) return alert("Pilih Therapist & Service!");
+            const baseTime = (new Date(currentRoom.end_time) > new Date()) ? new Date(currentRoom.end_time) : new Date();
+            const newEnd = new Date(baseTime.getTime() + (selectedExtra.sDur * 60000)).toISOString();
+            await _supabase.from('rooms').update({ end_time: newEnd }).eq('id', currentRoom.id);
+            await _supabase.from('transaksi_spa').insert([{ 
+                room_id: currentRoom.id, nama_item: "[EXT] " + selectedExtra.sName, 
+                harga_satuan: selectedExtra.sPrice, qty: 1, status_bayar: 'pending', 
+                therapist_id: selectedExtra.tId, outlet_name: document.getElementById('active-outlet').value 
+            }]);
+            alert("Berhasil!"); toggleExtraTimeSection(); fetchActiveBill(currentRoom.id); loadRoomMap();
+        }
+
+        async function addToBill() {
+            if(!selectedPicker.pName || !selectedSellerId) return alert("Pilih Produk & Staff!");
+            const qty = parseInt(document.getElementById('input-qty').value);
+            const { error } = await _supabase.from('transaksi_spa').insert([{ 
+                room_id: currentRoom.id, nama_item: selectedPicker.pName, 
+                harga_satuan: selectedPicker.pPrice, qty: qty, status_bayar: 'pending', 
+                therapist_id: selectedSellerId, outlet_name: document.getElementById('active-outlet').value 
+            }]);
+            if(!error) { window.print(); fetchActiveBill(currentRoom.id); }
         }
 
         async function finalizePayment() {
-            const payAmount = parseInt(document.getElementById('input-pay-amount').value) || 0;
-            if (currentPaymentMethod === 'CASH' && payAmount < finalAmountToPay) return alert("Uang Kurang!");
-
+            const payAmt = parseInt(document.getElementById('input-pay-amount').value) || 0;
+            if (currentPaymentMethod === 'CASH' && payAmt < currentTotalBill) return alert("Uang Kurang!");
             const payload = { 
                 status_bayar: 'paid', metode_bayar: currentPaymentMethod,
-                total_bayar: finalAmountToPay, waktu_bayar: new Date().toISOString()
+                total_bayar: currentTotalBill, waktu_bayar: new Date().toISOString()
             };
             if (currentPaymentMethod !== 'CASH') payload.bank_id = selectedBankId;
-
             const { error } = await _supabase.from('transaksi_spa').update(payload).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
-            if(error) return alert("Gagal Simpan: " + error.message);
-
+            if(error) return alert("Error: " + error.message);
             await _supabase.from('rooms').update({ status: 'standby', therapist_id: null, end_time: null }).eq('id', currentRoom.id);
-            alert("Berhasil!"); location.reload();
+            alert("Sukses!"); location.reload();
         }
 
         function setMethod(m) {
@@ -404,30 +311,18 @@
             if(btn) btn.className = "pay-method-btn p-5 border-2 rounded-2xl font-bold bg-blue-600 text-white shadow-lg";
         }
 
-        function calcChange() {
-            const val = parseInt(document.getElementById('input-pay-amount').value) || 0;
-            document.getElementById('label-change').innerText = `Rp ${(val - finalAmountToPay < 0 ? 0 : val - finalAmountToPay).toLocaleString()}`;
-        }
-
-        function closeModal() { document.getElementById('pos-modal').classList.add('hidden'); }
-        function closePicker() { document.getElementById('picker-modal').classList.add('hidden'); }
         function openPicker(type) {
             selectedPicker.type = type;
             document.getElementById('picker-modal').classList.remove('hidden');
-            let data = [];
-            if(type === 'service' || type === 'service_extra') data = masterServices;
-            else if(type === 'product') data = masterProducts;
-            else data = masterTherapists;
+            let data = (type === 'service' || type === 'service_extra') ? masterServices : (type === 'product' ? masterProducts : masterTherapists);
             renderPickerTable(data);
         }
 
         function renderPickerTable(data) {
             const body = document.getElementById('picker-table-body'); body.innerHTML = '';
             data.forEach(item => {
-                const name = item.name || item.nama_produk;
-                const price = item.price || item.harga || 0;
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-blue-50 cursor-pointer";
+                const name = item.name || item.nama_produk, price = item.price || item.harga || 0;
+                const tr = document.createElement('tr'); tr.className = "hover:bg-blue-50 cursor-pointer";
                 tr.onclick = () => {
                     const t = selectedPicker.type;
                     if(t==='staff_handle') { selectedStaffHandleId=item.t_id; document.getElementById('label-staff-handle').innerText=name; }
@@ -445,12 +340,28 @@
         }
 
         async function startSession() {
-            if(!selectedStaffHandleId || !selectedPicker.tId || !selectedPicker.sName) return alert("Lengkapi Data!");
-            const guest = document.getElementById('input-guest-name').value || "GUEST";
+            if(!selectedStaffHandleId || !selectedPicker.tId) return alert("Lengkapi Data!");
             const endTime = new Date(Date.now() + (selectedPicker.sDur * 60000)).toISOString();
             await _supabase.from('rooms').update({ status: 'occupied', therapist_id: selectedPicker.tId, end_time: endTime }).eq('id', currentRoom.id);
-            await _supabase.from('transaksi_spa').insert([{ room_id: currentRoom.id, nama_item: selectedPicker.sName, harga_satuan: selectedPicker.sPrice, qty: 1, status_bayar: 'pending', therapist_id: selectedPicker.tId, staff_handle_id: selectedStaffHandleId, customer_name: guest, outlet_name: document.getElementById('active-outlet').value }]);
+            await _supabase.from('transaksi_spa').insert([{ 
+                room_id: currentRoom.id, nama_item: selectedPicker.sName, harga_satuan: selectedPicker.sPrice, 
+                qty: 1, status_bayar: 'pending', therapist_id: selectedPicker.tId, 
+                staff_handle_id: selectedStaffHandleId, customer_name: document.getElementById('input-guest-name').value || "GUEST", 
+                outlet_name: document.getElementById('active-outlet').value 
+            }]);
             closeModal(); loadRoomMap();
+        }
+
+        function closeModal() { document.getElementById('pos-modal').classList.add('hidden'); }
+        function closePicker() { document.getElementById('picker-modal').classList.add('hidden'); }
+        function calcChange() {
+            const val = parseInt(document.getElementById('input-pay-amount').value) || 0;
+            document.getElementById('label-change').innerText = `Rp ${(val - currentTotalBill < 0 ? 0 : val - currentTotalBill).toLocaleString()}`;
+        }
+        function openPaymentModal() {
+            document.getElementById('pay-subtotal').innerText = `Rp ${currentTotalBill.toLocaleString()}`;
+            document.getElementById('pay-grand-total').innerText = `Rp ${currentTotalBill.toLocaleString()}`;
+            document.getElementById('payment-modal').classList.remove('hidden');
         }
 
         init();
