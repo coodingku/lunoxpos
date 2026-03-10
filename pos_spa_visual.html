@@ -212,15 +212,26 @@
             if(bk) document.getElementById('db-payment-method').innerHTML = '<option value="CASH">CASH</option>' + bk.map(b => `<option value="${b.name}">${b.name}</option>`).join('');
         }
 
-        async function loadMasterData() {
-            const out = document.getElementById('active-outlet').value;
-            const { data: staff } = await _supabase.from('therapists').select('*').eq('outlet_name', out);
-            masterAllStaff = staff || [];
-            const { data: svc } = await _supabase.from('services').select('*').eq('outlet_name', out);
-            masterServices = svc || [];
-            const { data: pd } = await _supabase.from('produk').select('*').eq('outlet_name', out);
-            masterProducts = pd || [];
-        }
+       // 1. Pastikan pengambilan data master lebih luas
+async function loadMasterData() {
+    const out = document.getElementById('active-outlet').value;
+    
+    // Ambil SEMUA staff di outlet tersebut tanpa filter kategori dulu di query
+    const { data: staff, error: staffError } = await _supabase
+        .from('therapists')
+        .select('*')
+        .eq('outlet_name', out);
+
+    if (staffError) console.error("Error loading staff:", staffError);
+    masterAllStaff = staff || [];
+
+    const { data: svc } = await _supabase.from('services').select('*').eq('outlet_name', out);
+    masterServices = svc || [];
+    
+    const { data: pd } = await _supabase.from('produk').select('*').eq('outlet_name', out);
+    masterProducts = pd || [];
+}
+
 
         async function loadRoomMap() {
             const out = document.getElementById('active-outlet').value;
@@ -278,52 +289,72 @@
             document.getElementById('bill-total-display').innerText = `Rp ${total.toLocaleString()}`;
         }
 
-        function openPicker(type) {
-            selectedPicker.type = type;
-            const body = document.getElementById('picker-table-body'); body.innerHTML = '';
-            let data = [];
+       // 2. Perbaikan Filter di OpenPicker (Case Insensitive)
+function openPicker(type) {
+    selectedPicker.type = type;
+    const body = document.getElementById('picker-table-body'); 
+    body.innerHTML = '';
+    let data = [];
 
-            // FILTER LOGIKA STAFF VS THERAPIST
-            if(type === 'gro') {
-                data = masterAllStaff.filter(s => s.category !== 'Therapist'); // Hanya Staff/GRO/Admin
-            } else if(type === 'therapist' || type === 'therapist_seller' || type === 'extra_therapist') {
-                data = masterAllStaff.filter(s => s.category === 'Therapist'); // Hanya Therapist
-            } else if(type === 'service' || type === 'extra_service') {
-                data = masterServices;
-            } else {
-                data = masterProducts;
-            }
-
-            data.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b hover:bg-blue-50 cursor-pointer";
-                tr.onclick = () => {
-                    if(type === 'gro') { selectedGroName = item.name; document.getElementById('label-gro').innerText = item.name; }
-                    if(type === 'therapist') { selectedPicker.tId = item.t_id; document.getElementById('label-therapist').innerText = item.name; }
-                    if(type === 'therapist_seller') { selectedSellerId = item.t_id; document.getElementById('label-seller').innerText = "Oleh: " + item.name; }
-                    if(type === 'service') { 
-                        selectedPicker.sName = item.name; selectedPicker.sPrice = item.price; selectedPicker.sDur = item.dur; 
-                        document.getElementById('label-service').innerText = item.name; 
-                    }
-                    if(type === 'product') { 
-                        selectedPicker.pName = item.nama_produk; selectedPicker.pPrice = item.harga; 
-                        document.getElementById('label-product').innerText = item.nama_produk; 
-                    }
-                    if(type === 'extra_service') {
-                        selectedPicker.exSvc = item.name; selectedPicker.exPrice = item.price;
-                        openPicker('extra_therapist'); return; // Lanjut pilih therapist setelah pilih service extra
-                    }
-                    if(type === 'extra_therapist') {
-                        addExtraToBill(item.t_id, item.name);
-                    }
-                    closePicker();
-                };
-                tr.innerHTML = `<td class="p-5 uppercase">${item.name || item.nama_produk}</td><td class="p-5 text-right font-black">${(item.price || item.harga || 0).toLocaleString()}</td>`;
-                body.appendChild(tr);
-            });
-            document.getElementById('picker-title').innerText = type.replace('_',' ').toUpperCase();
-            document.getElementById('picker-modal').classList.remove('hidden');
+    if(type === 'gro') {
+        // Filter: Semua yang kategorinya BUKAN 'Therapist' (Abaikan huruf besar/kecil)
+        data = masterAllStaff.filter(s => 
+            s.category && s.category.toLowerCase() !== 'therapist'
+        );
+    } else if(type === 'therapist' || type === 'therapist_seller' || type === 'extra_therapist') {
+        // Filter: Hanya yang kategorinya 'Therapist'
+        data = masterAllStaff.filter(s => 
+            s.category && s.category.toLowerCase() === 'therapist'
+        );
+        
+        // Tambahan: Jika untuk 'therapist' utama, tampilkan hanya yang 'standby'
+        if(type === 'therapist') {
+            data = data.filter(s => s.status === 'standby');
         }
+    } else if(type === 'service' || type === 'extra_service') {
+        data = masterServices;
+    } else {
+        data = masterProducts;
+    }
+
+    if (data.length === 0) {
+        body.innerHTML = `<tr><td colspan="2" class="p-10 text-center text-slate-400 italic">Data tidak ditemukan...</td></tr>`;
+    }
+
+    data.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = "border-b hover:bg-blue-50 cursor-pointer";
+        tr.onclick = () => {
+            const name = item.name || item.nama_produk;
+            const price = item.price || item.harga || 0;
+
+            if(type === 'gro') { selectedGroName = name; document.getElementById('label-gro').innerText = name; }
+            if(type === 'therapist') { selectedPicker.tId = item.t_id; document.getElementById('label-therapist').innerText = name; }
+            if(type === 'therapist_seller') { selectedSellerId = item.t_id; document.getElementById('label-seller').innerText = "Oleh: " + name; }
+            if(type === 'service') { 
+                selectedPicker.sName = name; selectedPicker.sPrice = price; selectedPicker.sDur = item.dur || 60; 
+                document.getElementById('label-service').innerText = name; 
+            }
+            if(type === 'product') { 
+                selectedPicker.pName = name; selectedPicker.pPrice = price; 
+                document.getElementById('label-product').innerText = name; 
+            }
+            if(type === 'extra_service') {
+                selectedPicker.exSvc = name; selectedPicker.exPrice = price;
+                openPicker('extra_therapist'); return; 
+            }
+            if(type === 'extra_therapist') {
+                addExtraToBill(item.t_id, name);
+            }
+            closePicker();
+        };
+        tr.innerHTML = `<td class="p-5 uppercase">${item.name || item.nama_produk}</td><td class="p-5 text-right font-black">${(item.price || item.harga || 0).toLocaleString()}</td>`;
+        body.appendChild(tr);
+    });
+    
+    document.getElementById('picker-title').innerText = type.replace('_',' ').toUpperCase();
+    document.getElementById('picker-modal').classList.remove('hidden');
+}
 
         async function startSession() {
             if(!selectedPicker.tId || !selectedPicker.sName || !selectedGroName) return alert("Data Belum Lengkap!");
