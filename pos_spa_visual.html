@@ -281,56 +281,87 @@
             document.getElementById('bill-total-display').innerText = `Rp ${total.toLocaleString()}`;
         }
 
-        function openPicker(type) {
-            selectedPicker.type = type;
-            const body = document.getElementById('picker-table-body'); 
-            body.innerHTML = '';
-            let data = [];
+       function openPicker(type) {
+    selectedPicker.type = type;
+    const body = document.getElementById('picker-table-body'); 
+    body.innerHTML = '';
+    let data = [];
 
-            if (type === 'gro') {
-                data = masterAllStaff.filter(s => s.category?.toLowerCase() === 'staff');
-            } else if (['therapist', 'therapist_seller', 'extra_therapist'].includes(type)) {
-                data = masterAllStaff.filter(s => s.category?.toLowerCase() === 'therapist');
-                if (type === 'therapist') {
-                    const standby = data.filter(s => s.status?.toLowerCase() === 'standby');
-                    if(standby.length > 0) data = standby;
-                }
-            } else if (['service', 'extra_service'].includes(type)) {
-                data = masterServices;
-            } else {
-                data = masterProducts;
-            }
-
-            if (data.length === 0) {
-                body.innerHTML = `<tr><td colspan="2" class="p-10 text-center text-slate-400 font-bold uppercase text-[10px] italic">Data tidak ditemukan</td></tr>`;
-            }
-
-            data.forEach(item => {
-                const name = item.name || item.nama_produk;
-                const price = item.price || item.harga || 0;
-                const tr = document.createElement('tr');
-                tr.className = "border-b hover:bg-blue-50 cursor-pointer";
-                tr.onclick = () => {
-                    if (type === 'gro') { selectedGroName = name; document.getElementById('label-gro').innerText = name; }
-                    if (type === 'therapist') { selectedPicker.tId = item.t_id; document.getElementById('label-therapist').innerText = name; }
-                    if (type === 'therapist_seller') { selectedSellerId = item.t_id; document.getElementById('label-seller').innerText = "Oleh: " + name; }
-                    if (type === 'service') { 
-                        selectedPicker.sName = name; selectedPicker.sPrice = price; 
-                        selectedPicker.sDur = item.dur || 60; document.getElementById('label-service').innerText = name; 
-                    }
-                    if (type === 'product') { selectedPicker.pName = name; selectedPicker.pPrice = price; document.getElementById('label-product').innerText = name; }
-                    if (type === 'extra_service') { selectedPicker.exSvc = name; selectedPicker.exPrice = price; openPicker('extra_therapist'); return; }
-                    if (type === 'extra_therapist') { addExtraToBill(item.t_id, name); }
-                    closePicker();
-                };
-                tr.innerHTML = `<td class="p-5 uppercase font-black text-slate-700">${name}</td><td class="p-5 text-right text-blue-600 font-black">${price > 0 ? 'Rp '+price.toLocaleString() : '-'}</td>`;
-                body.appendChild(tr);
-            });
-
-            document.getElementById('picker-title').innerText = type.replace('_', ' ').toUpperCase();
-            document.getElementById('picker-modal').classList.remove('hidden');
+    // --- LOGIKA FILTER SPESIFIK ---
+    if (type === 'gro') {
+        // Hanya kategori Staff (untuk handle tamu di depan)
+        data = masterAllStaff.filter(s => s.category?.toLowerCase() === 'staff');
+    } 
+    else if (type === 'therapist' || type === 'extra_therapist') {
+        // WAJIB Kategori Therapist (untuk layanan massage/utama/extra)
+        data = masterAllStaff.filter(s => s.category?.toLowerCase() === 'therapist');
+        
+        // Khusus untuk 'therapist' utama, kita utamakan yang standby
+        if (type === 'therapist') {
+            const standby = data.filter(s => s.status?.toLowerCase() === 'standby');
+            if(standby.length > 0) data = standby;
         }
+    } 
+    else if (type === 'therapist_seller') {
+        // BEBAS: Tampilkan Semua (Staff & Therapist) untuk jualan produk
+        data = masterAllStaff; 
+    } 
+    else if (['service', 'extra_service'].includes(type)) {
+        data = masterServices;
+    } 
+    else {
+        data = masterProducts;
+    }
 
+    // Render Data ke Table
+    if (data.length === 0) {
+        body.innerHTML = `<tr><td colspan="2" class="p-10 text-center text-slate-400 font-bold uppercase text-[10px] italic">Data tidak ditemukan</td></tr>`;
+    }
+
+    data.forEach(item => {
+        const name = item.name || item.nama_produk;
+        const price = item.price || item.harga || 0;
+        const tr = document.createElement('tr');
+        tr.className = "border-b hover:bg-blue-50 cursor-pointer";
+        tr.onclick = () => {
+            // Logic Assignment
+            if (type === 'gro') { selectedGroName = name; document.getElementById('label-gro').innerText = name; }
+            if (type === 'therapist') { selectedPicker.tId = item.t_id; document.getElementById('label-therapist').innerText = name; }
+            if (type === 'therapist_seller') { selectedSellerId = item.t_id; document.getElementById('label-seller').innerText = "Oleh: " + name; }
+            
+            if (type === 'service') { 
+                selectedPicker.sName = name; selectedPicker.sPrice = price; 
+                selectedPicker.sDur = item.dur || 60; document.getElementById('label-service').innerText = name; 
+            }
+            if (type === 'product') { selectedPicker.pName = name; selectedPicker.pPrice = price; document.getElementById('label-product').innerText = name; }
+            
+            // Flow untuk Extra Service -> lanjut pilih Extra Therapist
+            if (type === 'extra_service') { 
+                selectedPicker.exSvc = name; 
+                selectedPicker.exPrice = price; 
+                openPicker('extra_therapist'); 
+                return; 
+            }
+            
+            if (type === 'extra_therapist') { addExtraToBill(item.t_id, name); }
+            
+            closePicker();
+        };
+        
+        tr.innerHTML = `
+            <td class="p-5">
+                <div class="uppercase font-black text-slate-700">${name}</div>
+                <div class="text-[9px] text-slate-400 font-bold uppercase">${item.category || ''} ${item.status ? '• ' + item.status : ''}</div>
+            </td>
+            <td class="p-5 text-right text-blue-600 font-black">
+                ${price > 0 ? 'Rp '+price.toLocaleString() : '-'}
+            </td>`;
+        body.appendChild(tr);
+    });
+
+    document.getElementById('picker-title').innerText = type.replace('_', ' ').toUpperCase();
+    document.getElementById('picker-modal').classList.remove('hidden');
+}
         async function startSession() {
             if(!selectedPicker.tId || !selectedPicker.sName || !selectedGroName) return alert("Data Belum Lengkap!");
             const endTime = new Date(Date.now() + selectedPicker.sDur * 60000).toISOString();
