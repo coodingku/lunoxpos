@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUNOX - Commission Reports</title>
+    <title>LUNOX - Full Business Reports</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -11,6 +11,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f1f5f9; }
         .card-shadow { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02); }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body class="p-8">
@@ -18,47 +19,74 @@
     <div class="max-w-7xl mx-auto">
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
             <div>
-                <h1 class="text-3xl font-black italic tracking-tighter text-slate-800 uppercase">Payroll <span class="text-blue-600">& Commission</span></h1>
-                <p class="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Laporan Bagi Hasil Staff & Therapist</p>
+                <h1 class="text-3xl font-black italic tracking-tighter text-slate-800 uppercase">Business <span class="text-blue-600">Report</span></h1>
+                <p class="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Laporan Payroll & Detail Waktu Check-in/Out</p>
             </div>
             
-            <div class="flex gap-3 bg-white p-2 rounded-[2rem] shadow-sm border">
+            <div class="flex gap-3 bg-white p-2 rounded-[2rem] shadow-sm border no-print">
                 <input type="date" id="date-start" class="bg-transparent px-4 py-2 text-xs font-bold outline-none">
                 <span class="flex items-center text-slate-300">-</span>
                 <input type="date" id="date-end" class="bg-transparent px-4 py-2 text-xs font-bold outline-none">
                 <button onclick="loadReport()" class="bg-blue-600 text-white px-6 py-2 rounded-full text-xs font-black uppercase hover:bg-black transition">Filter</button>
+                <button onclick="window.print()" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-full text-xs font-black uppercase hover:bg-slate-200 transition"><i class="fa fa-print"></i></button>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            <div class="bg-white p-8 rounded-[2.5rem] card-shadow border border-slate-100">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Omzet (Nett)</p>
-                <h2 id="total-omzet" class="text-3xl font-black text-slate-800">Rp 0</h2>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+            <div class="bg-white p-6 rounded-[2rem] card-shadow border border-slate-100">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Omzet Room</p>
+                <h2 id="total-omzet" class="text-2xl font-black text-slate-800">Rp 0</h2>
             </div>
-            <div class="bg-blue-600 p-8 rounded-[2.5rem] card-shadow text-white">
-                <p class="text-[10px] font-black opacity-60 uppercase tracking-widest mb-2">Total Komisi Staff</p>
-                <h2 id="total-komisi" class="text-3xl font-black">Rp 0</h2>
+            <div class="bg-white p-6 rounded-[2rem] card-shadow border border-slate-100">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Penjualan Produk</p>
+                <h2 id="total-omzet-produk" class="text-2xl font-black text-orange-600">Rp 0</h2>
             </div>
-            <div class="bg-slate-900 p-8 rounded-[2.5rem] card-shadow text-white">
-                <p class="text-[10px] font-black opacity-60 uppercase tracking-widest mb-2">Profit Bersih (Estimasi)</p>
-                <h2 id="total-profit" class="text-3xl font-black text-emerald-400">Rp 0</h2>
+            <div class="bg-blue-600 p-6 rounded-[2rem] card-shadow text-white">
+                <p class="text-[10px] font-black opacity-60 uppercase tracking-widest mb-1">Total Komisi Staff</p>
+                <h2 id="total-komisi" class="text-2xl font-black">Rp 0</h2>
+            </div>
+            <div class="bg-slate-900 p-6 rounded-[2rem] card-shadow text-white">
+                <p class="text-[10px] font-black opacity-60 uppercase tracking-widest mb-1">Profit Bersih (Estimasi)</p>
+                <h2 id="total-profit" class="text-2xl font-black text-emerald-400">Rp 0</h2>
             </div>
         </div>
 
-        <div class="bg-white rounded-[3rem] shadow-sm border border-slate-100 overflow-hidden">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
-                        <th class="p-6">Staff / Therapist</th>
-                        <th class="p-6">Qty Service</th>
-                        <th class="p-6">Gaji Pokok</th>
-                        <th class="p-6">Total Komisi</th>
-                        <th class="p-6 bg-blue-50/50 text-blue-600">Total Take Home Pay</th>
-                    </tr>
-                </thead>
-                <tbody id="report-table" class="font-bold text-slate-700 text-sm">
-                    </tbody>
-            </table>
+        <div class="mb-12">
+            <h3 class="text-sm font-black uppercase mb-4 flex items-center gap-2 text-slate-500">
+                <i class="fa fa-clock text-blue-600"></i> Detail Kerja & Komisi Therapist
+            </h3>
+            <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
+                            <th class="p-5">Therapist</th>
+                            <th class="p-5">Item Service</th>
+                            <th class="p-5">Check In</th>
+                            <th class="p-5">Check Out</th>
+                            <th class="p-5 text-right">Komisi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="therapist-table" class="font-bold text-slate-700 text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mb-12">
+            <h3 class="text-sm font-black uppercase mb-4 flex items-center gap-2 text-slate-500">
+                <i class="fa fa-user-tie text-emerald-600"></i> Penjualan Room Oleh Staff (Handle)
+            </h3>
+            <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
+                            <th class="p-5">Nama Staff</th>
+                            <th class="p-5 text-center">Tamu</th>
+                            <th class="p-5 text-right">Total Transaksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="staff-table" class="font-bold text-slate-700 text-sm"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -67,70 +95,86 @@
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1iem95ZGNlaGh2amRxZmVmZmxvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NzYzNjcsImV4cCI6MjA4ODQ1MjM2N30.q5Ok1HJEeUIh-93KoXuH0zYqRN4i3LcweRMG9pWJkRg";
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
-        // Set default tanggal hari ini
         document.getElementById('date-start').value = new Date().toISOString().split('T')[0];
         document.getElementById('date-end').value = new Date().toISOString().split('T')[0];
+
+        // Fungsi format jam (HH:mm)
+        function formatTime(isoString) {
+            if (!isoString) return "-";
+            const d = new Date(isoString);
+            return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        }
 
         async function loadReport() {
             const start = document.getElementById('date-start').value + "T00:00:00";
             const end = document.getElementById('date-end').value + "T23:59:59";
             
-            // 1. Ambil Data Therapist
-            const { data: staff } = await _supabase.from('therapists').select('*');
-            
-            // 2. Ambil Data Transaksi Completed dalam range tanggal
+            const { data: allStaff } = await _supabase.from('therapists').select('*');
+            const { data: allProducts } = await _supabase.from('produk').select('*');
             const { data: trans } = await _supabase.from('transaksi_spa')
                 .select('*')
                 .eq('status_bayar', 'completed')
                 .gte('checkout_at', start)
-                .lte('checkout_at', end);
+                .lte('checkout_at', end)
+                .order('checkout_at', { ascending: true });
 
-            let summaryHtml = '';
-            let grandTotalOmzet = 0;
+            if (!trans) return;
+
+            let thpTable = '';
             let grandTotalKomisi = 0;
+            let grandTotalOmzetRoom = 0;
+            let grandTotalProduk = 0;
 
-            staff.forEach(s => {
-                const myTrans = trans.filter(t => t.therapist_id === s.t_id);
-                let totalSvc = 0;
-                let totalCom = 0;
+            // 1. PROSES DATA THERAPIST DENGAN DETAIL JAM
+            trans.filter(t => t.therapist_id).forEach(t => {
+                const sInfo = allStaff.find(st => st.t_id === t.therapist_id);
+                let com = t.commission_type === 'percentage' ? (t.harga_satuan * t.qty) * (t.commission_value / 100) : t.commission_value * t.qty;
+                
+                grandTotalKomisi += com;
+                grandTotalOmzetRoom += (t.harga_satuan * t.qty);
 
-                myTrans.forEach(t => {
-                    // Hitung Komisi per Item
-                    let itemCom = 0;
-                    if(t.commission_type === 'percentage') {
-                        itemCom = (t.harga_satuan * t.qty) * (t.commission_value / 100);
-                    } else {
-                        itemCom = t.commission_value * t.qty;
-                    }
-                    
-                    totalCom += itemCom;
-                    totalSvc += t.qty;
-                    grandTotalOmzet += (t.harga_satuan * t.qty);
-                });
-
-                grandTotalKomisi += totalCom;
-                const thp = (s.salary || 0) + totalCom;
-
-                summaryHtml += `
+                thpTable += `
                     <tr class="border-b hover:bg-slate-50 transition">
-                        <td class="p-6">
-                            <div class="flex flex-col">
-                                <span class="uppercase italic font-black text-slate-800">${s.name}</span>
-                                <span class="text-[10px] text-slate-400">ID: ${s.t_id} | ${s.outlet_name}</span>
-                            </div>
+                        <td class="p-5">
+                            <span class="uppercase italic font-black">${sInfo ? sInfo.name : 'N/A'}</span>
                         </td>
-                        <td class="p-6 text-slate-400">${totalSvc} Items</td>
-                        <td class="p-6">Rp ${(s.salary || 0).toLocaleString()}</td>
-                        <td class="p-6 text-emerald-600">+ Rp ${totalCom.toLocaleString()}</td>
-                        <td class="p-6 bg-blue-50/30 text-blue-600 font-black text-lg">Rp ${thp.toLocaleString()}</td>
+                        <td class="p-5 text-slate-500">${t.nama_item}</td>
+                        <td class="p-5"><span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px]">${formatTime(t.created_at)}</span></td>
+                        <td class="p-5"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px]">${formatTime(t.checkout_at)}</span></td>
+                        <td class="p-5 text-right text-emerald-600 font-black">Rp ${com.toLocaleString()}</td>
                     </tr>
                 `;
             });
 
-            document.getElementById('report-table').innerHTML = summaryHtml || '<tr><td colspan="5" class="p-10 text-center opacity-50">Tidak ada data transaksi</td></tr>';
-            document.getElementById('total-omzet').innerText = `Rp ${grandTotalOmzet.toLocaleString()}`;
+            // 2. PROSES STAFF HANDLE
+            let staffTable = '';
+            const staffList = {};
+            trans.forEach(t => {
+                if(t.staff_handle_id) {
+                    if(!staffList[t.staff_handle_id]) staffList[t.staff_handle_id] = { count: 0, total: 0 };
+                    staffList[t.staff_handle_id].count++;
+                    staffList[t.staff_handle_id].total += (t.harga_satuan * t.qty);
+                }
+            });
+
+            Object.entries(staffList).forEach(([id, val]) => {
+                const sInfo = allStaff.find(st => st.t_id === id);
+                staffTable += `<tr class="border-b"><td class="p-5 uppercase italic font-bold">${sInfo ? sInfo.name : 'Unknown'}</td><td class="p-5 text-center">${val.count} Tamu</td><td class="p-5 text-right font-black">Rp ${val.total.toLocaleString()}</td></tr>`;
+            });
+
+            // 3. PROSES PRODUK
+            trans.forEach(t => {
+                const isProd = allProducts.some(p => p.nama_produk === t.nama_item);
+                if(isProd) grandTotalProduk += (t.harga_satuan * t.qty);
+            });
+
+            document.getElementById('therapist-table').innerHTML = thpTable || '<tr><td colspan="5" class="p-10 text-center opacity-50">Tidak ada aktivitas therapist</td></tr>';
+            document.getElementById('staff-table').innerHTML = staffTable || '<tr><td colspan="3" class="p-10 text-center opacity-50">Tidak ada data handle</td></tr>';
+            
+            document.getElementById('total-omzet').innerText = `Rp ${grandTotalOmzetRoom.toLocaleString()}`;
+            document.getElementById('total-omzet-produk').innerText = `Rp ${grandTotalProduk.toLocaleString()}`;
             document.getElementById('total-komisi').innerText = `Rp ${grandTotalKomisi.toLocaleString()}`;
-            document.getElementById('total-profit').innerText = `Rp ${(grandTotalOmzet - grandTotalKomisi).toLocaleString()}`;
+            document.getElementById('total-profit').innerText = `Rp ${((grandTotalOmzetRoom + grandTotalProduk) - grandTotalKomisi).toLocaleString()}`;
         }
 
         loadReport();
