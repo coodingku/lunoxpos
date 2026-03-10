@@ -126,44 +126,53 @@
         // ... (SB_URL, SB_KEY, _supabase, dll tetap sama) ...
 
         async function loadRoomMap() {
-            const out = document.getElementById('active-outlet').value;
-            const { data: rooms } = await _supabase.from('rooms').select('*').eq('outlet_name', out).order('name');
-            const { data: trans } = await _supabase.from('transaksi_spa').select('room_id').eq('status_bayar', 'pending').eq('outlet_name', out);
-            
-            masterRoomsData = rooms || [];
-            const grid = document.getElementById('room-grid'); 
-            grid.innerHTML = '';
-            
-            masterRoomsData.forEach(r => {
-                const hasTrans = (trans || []).some(t => t.room_id === r.id);
-                let style = 'room-standby', label = 'READY';
+    const out = document.getElementById('active-outlet').value;
+    
+    // Ambil data room
+    const { data: rooms } = await _supabase.from('rooms').select('*').eq('outlet_name', out).order('name');
+    
+    // Ambil transaksi yang sedang aktif (pending) untuk mendapatkan Nama Tamu & Staff
+    const { data: activeTrans } = await _supabase.from('transaksi_spa')
+        .select('room_id, guest_name, staff_handle_id')
+        .eq('status_bayar', 'pending')
+        .eq('outlet_name', out);
+    
+    const grid = document.getElementById('room-grid'); 
+    grid.innerHTML = '';
+    
+    rooms.forEach(r => {
+        // Cari apakah ada transaksi aktif di room ini
+        const currentSession = activeTrans?.find(t => t.room_id === r.id);
+        
+        let style = 'room-standby', label = 'READY';
+        if (r.status === 'occupied') { style = 'room-progress'; label = 'MASSAGE'; }
+        
+        const card = document.createElement('div');
+        card.className = `${style} p-6 rounded-[2rem] text-center shadow-lg transition-all cursor-pointer flex flex-col justify-between min-h-[160px]`;
+        card.onclick = () => openModal(r);
+        
+        // Tampilkan Nama Tamu & Staff jika ada sesi aktif
+        const guestDisplay = currentSession?.guest_name 
+            ? `<div class="mt-2 text-[10px] font-bold border-t border-white/20 pt-2 uppercase"><i class="fa fa-user mr-1"></i> ${currentSession.guest_name}</div>` 
+            : '';
+        
+        const staffDisplay = currentSession?.staff_handle_id 
+            ? `<div class="text-[9px] opacity-80 italic">GRO: ${currentSession.staff_handle_id}</div>` 
+            : '';
 
-                if (r.status === 'occupied') { style = 'room-progress'; label = 'MASSAGE'; }
-                else if (r.status === 'checked_out') { style = 'room-checkedout'; label = 'CHECKOUT'; }
-                else if (hasTrans) { style = 'room-pending'; label = 'BILL'; }
-                
-                const card = document.createElement('div');
-                card.className = `${style} p-6 rounded-[2rem] text-center shadow-lg transition-all transform hover:scale-105 cursor-pointer border-4 border-white/20 flex flex-col justify-between min-h-[160px]`;
-                card.onclick = () => openModal(r);
-                
-                // Info Tambahan Tamu & Staff jika room Occupied
-                const guestInfo = r.guest_name ? `<div class="mt-2 text-[11px] font-bold border-t border-white/20 pt-2"><i class="fa fa-user mr-1"></i> ${r.guest_name.toUpperCase()}</div>` : '';
-                const groInfo = r.gro_name ? `<div class="text-[9px] font-medium opacity-80 italic">Handle by: ${r.gro_name}</div>` : '';
-
-                card.innerHTML = `
-                    <div>
-                        <div class="text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">${label}</div>
-                        <h3 class="font-black text-2xl italic tracking-tighter">${r.name}</h3>
-                    </div>
-                    <div>
-                        ${guestInfo}
-                        ${groInfo}
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-        }
-
+        card.innerHTML = `
+            <div>
+                <div class="text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">${label}</div>
+                <h3 class="font-black text-2xl italic tracking-tighter">${r.name}</h3>
+            </div>
+            <div>
+                ${guestDisplay}
+                ${staffDisplay}
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
         function openModal(r) { 
             currentRoom = r; 
             document.getElementById('modal-room-name').innerText = r.name; 
@@ -185,35 +194,28 @@
             fetchActiveBill(r.id);
         }
 
-        async function startSession() {
-            const guestName = document.getElementById('input-guest-name').value;
-            const groName = document.getElementById('input-gro-name').value;
+      async function startSession() {
+    const guestName = document.getElementById('input-guest-name').value;
+    const groId = document.getElementById('selected-gro-id').value; // Ambil ID Staff
 
-            if(!selectedPicker.tId || !selectedPicker.sName) return alert("Pilih Therapist & Layanan!");
-            if(!guestName) return alert("Isi Nama Tamu!");
+    // Update Room jadi Occupied
+    await _supabase.from('rooms').update({ status: 'occupied' }).eq('id', currentRoom.id);
 
-            const end = new Date(Date.now() + selectedPicker.sDur * 60000).toISOString();
-            
-            // Update Rooms dengan Guest & GRO
-            await _supabase.from('rooms').update({ 
-                status: 'occupied', 
-                therapist_id: selectedPicker.tId, 
-                end_time: end,
-                guest_name: guestName,
-                gro_name: groName
-            }).eq('id', currentRoom.id);
-
-            await _supabase.from('therapists').update({ status: 'progress', end_time: end }).eq('t_id', selectedPicker.tId);
-            
-            await _supabase.from('transaksi_spa').insert([{ 
-                room_id: currentRoom.id, nama_item: selectedPicker.sName, harga_satuan: selectedPicker.sPrice, qty: 1, 
-                status_bayar: 'pending', outlet_name: document.getElementById('active-outlet').value, therapist_id: selectedPicker.tId,
-                guest_name: guestName // simpan juga di transaksi jika perlu
-            }]);
-            
-            closeModal(); init();
-        }
-
+    // Insert ke Transaksi SPA dengan Nama Tamu & Staff Handle
+    await _supabase.from('transaksi_spa').insert([{ 
+        room_id: currentRoom.id, 
+        nama_item: selectedPicker.sName, 
+        harga_satuan: selectedPicker.sPrice, 
+        qty: 1, 
+        status_bayar: 'pending',
+        guest_name: guestName,        // Sesuai kolom di gambar
+        staff_handle_id: groId,      // Sesuai kolom di gambar
+        outlet_name: document.getElementById('active-outlet').value
+    }]);
+    
+    closeModal(); 
+    init();
+}
         async function processCheckout() {
             const totals = await calculateTotal();
             const payMethod = document.getElementById('db-payment-method').value;
