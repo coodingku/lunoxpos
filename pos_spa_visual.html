@@ -294,7 +294,7 @@
             const payAmt = parseInt(document.getElementById('input-pay-amount').value) || 0;
             if (currentPaymentMethod === 'CASH' && payAmt < currentTotalBill) return alert("Uang Kurang!");
             const payload = { 
-                status_bayar: 'paid', metode_bayar: currentPaymentMethod,
+                status_bayar: 'paid', payment_method: currentPaymentMethod,
                 total_bayar: currentTotalBill, waktu_bayar: new Date().toISOString()
             };
             if (currentPaymentMethod !== 'CASH') payload.bank_id = selectedBankId;
