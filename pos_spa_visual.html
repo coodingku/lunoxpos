@@ -136,7 +136,9 @@
                 <input type="text" id="picker-search" onkeyup="filterPicker()" placeholder="Cari..." class="w-full p-5 rounded-2xl border-none ring-2 ring-slate-100 focus:ring-blue-500 outline-none font-bold">
             </div>
             <div class="flex-1 overflow-y-auto px-6 pb-6">
-                <table class="w-full text-left"><tbody id="picker-table-body" class="font-bold text-slate-700"></tbody></table>
+                <table class="w-full text-left">
+                    <tbody id="picker-table-body" class="font-bold text-slate-700"></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -212,26 +214,17 @@
             if(bk) document.getElementById('db-payment-method').innerHTML = '<option value="CASH">CASH</option>' + bk.map(b => `<option value="${b.name}">${b.name}</option>`).join('');
         }
 
-       // 1. Pastikan pengambilan data master lebih luas
-async function loadMasterData() {
-    const out = document.getElementById('active-outlet').value;
-    
-    // Ambil SEMUA staff di outlet tersebut tanpa filter kategori dulu di query
-    const { data: staff, error: staffError } = await _supabase
-        .from('therapists')
-        .select('*')
-        .eq('outlet_name', out);
+        async function loadMasterData() {
+            const out = document.getElementById('active-outlet').value;
+            const { data: staff } = await _supabase.from('therapists').select('*').eq('outlet_name', out);
+            masterAllStaff = staff || [];
 
-    if (staffError) console.error("Error loading staff:", staffError);
-    masterAllStaff = staff || [];
-
-    const { data: svc } = await _supabase.from('services').select('*').eq('outlet_name', out);
-    masterServices = svc || [];
-    
-    const { data: pd } = await _supabase.from('produk').select('*').eq('outlet_name', out);
-    masterProducts = pd || [];
-}
-
+            const { data: svc } = await _supabase.from('services').select('*').eq('outlet_name', out);
+            masterServices = svc || [];
+            
+            const { data: pd } = await _supabase.from('produk').select('*').eq('outlet_name', out);
+            masterProducts = pd || [];
+        }
 
         async function loadRoomMap() {
             const out = document.getElementById('active-outlet').value;
@@ -263,7 +256,6 @@ async function loadMasterData() {
             document.getElementById('modal-room-name').innerText = r.name;
             document.getElementById('input-guest-name').value = session?.guest_name || '';
             
-            // UI Reset
             const isOcc = r.status === 'occupied';
             document.getElementById('room-status-badge').innerText = isOcc ? "Massage Progress" : "Available";
             document.getElementById('btn-start-massage').style.display = isOcc ? 'none' : 'block';
@@ -289,108 +281,56 @@ async function loadMasterData() {
             document.getElementById('bill-total-display').innerText = `Rp ${total.toLocaleString()}`;
         }
 
-       // 2. Perbaikan Filter di OpenPicker (Case Insensitive)
-function openPicker(type) {
-    selectedPicker.type = type;
-    const body = document.getElementById('picker-table-body'); 
-    body.innerHTML = '';
-    let data = [];
+        function openPicker(type) {
+            selectedPicker.type = type;
+            const body = document.getElementById('picker-table-body'); 
+            body.innerHTML = '';
+            let data = [];
 
-    // --- LOGIKA FILTER BERDASARKAN KATEGORI "STAFF" & "THERAPIST" ---
-    if (type === 'gro') {
-        // Hanya menampilkan yang kategorinya "Staff"
-        data = masterAllStaff.filter(s => 
-            s.category && s.category.trim().toLowerCase() === 'staff'
-        );
-    } 
-    else if (type === 'therapist' || type === 'therapist_seller' || type === 'extra_therapist') {
-        // Hanya menampilkan yang kategorinya "Therapist"
-        data = masterAllStaff.filter(s => 
-            s.category && s.category.trim().toLowerCase() === 'therapist'
-        );
+            if (type === 'gro') {
+                data = masterAllStaff.filter(s => s.category?.toLowerCase() === 'staff');
+            } else if (['therapist', 'therapist_seller', 'extra_therapist'].includes(type)) {
+                data = masterAllStaff.filter(s => s.category?.toLowerCase() === 'therapist');
+                if (type === 'therapist') {
+                    const standby = data.filter(s => s.status?.toLowerCase() === 'standby');
+                    if(standby.length > 0) data = standby;
+                }
+            } else if (['service', 'extra_service'].includes(type)) {
+                data = masterServices;
+            } else {
+                data = masterProducts;
+            }
 
-        // Filter status standby hanya untuk 'therapist' utama (Mulai Massage)
-        // Jika ingin semua muncul tanpa harus absensi, baris di bawah ini bisa dikomentari
-        if (type === 'therapist') {
-            const standbyOnly = data.filter(s => s.status && s.status.toLowerCase() === 'standby');
-            // Jika ada yang standby tampilkan yang standby, jika tidak ada tampilkan semua (fallback)
-            if (standbyOnly.length > 0) data = standbyOnly;
+            if (data.length === 0) {
+                body.innerHTML = `<tr><td colspan="2" class="p-10 text-center text-slate-400 font-bold uppercase text-[10px] italic">Data tidak ditemukan</td></tr>`;
+            }
+
+            data.forEach(item => {
+                const name = item.name || item.nama_produk;
+                const price = item.price || item.harga || 0;
+                const tr = document.createElement('tr');
+                tr.className = "border-b hover:bg-blue-50 cursor-pointer";
+                tr.onclick = () => {
+                    if (type === 'gro') { selectedGroName = name; document.getElementById('label-gro').innerText = name; }
+                    if (type === 'therapist') { selectedPicker.tId = item.t_id; document.getElementById('label-therapist').innerText = name; }
+                    if (type === 'therapist_seller') { selectedSellerId = item.t_id; document.getElementById('label-seller').innerText = "Oleh: " + name; }
+                    if (type === 'service') { 
+                        selectedPicker.sName = name; selectedPicker.sPrice = price; 
+                        selectedPicker.sDur = item.dur || 60; document.getElementById('label-service').innerText = name; 
+                    }
+                    if (type === 'product') { selectedPicker.pName = name; selectedPicker.pPrice = price; document.getElementById('label-product').innerText = name; }
+                    if (type === 'extra_service') { selectedPicker.exSvc = name; selectedPicker.exPrice = price; openPicker('extra_therapist'); return; }
+                    if (type === 'extra_therapist') { addExtraToBill(item.t_id, name); }
+                    closePicker();
+                };
+                tr.innerHTML = `<td class="p-5 uppercase font-black text-slate-700">${name}</td><td class="p-5 text-right text-blue-600 font-black">${price > 0 ? 'Rp '+price.toLocaleString() : '-'}</td>`;
+                body.appendChild(tr);
+            });
+
+            document.getElementById('picker-title').innerText = type.replace('_', ' ').toUpperCase();
+            document.getElementById('picker-modal').classList.remove('hidden');
         }
-    } 
-    else if (type === 'service' || type === 'extra_service') {
-        data = masterServices;
-    } 
-    else {
-        data = masterProducts;
-    }
 
-    // Tampilan jika data kosong
-    if (data.length === 0) {
-        let msg = "Data tidak ditemukan";
-        if (type === 'therapist') msg = "Therapist tidak ditemukan atau belum Absensi";
-        if (type === 'gro') msg = "Staff/GRO tidak ditemukan di database";
-        
-        body.innerHTML = `<tr><td colspan="2" class="p-10 text-center text-slate-400 font-bold uppercase text-[10px] italic">${msg}</td></tr>`;
-    }
-
-    data.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.className = "border-b hover:bg-blue-50 cursor-pointer";
-        tr.onclick = () => {
-            const name = item.name || item.nama_produk;
-            const price = item.price || item.harga || 0;
-
-            if (type === 'gro') { 
-                selectedGroName = name; 
-                document.getElementById('label-gro').innerText = name; 
-            }
-            if (type === 'therapist') { 
-                selectedPicker.tId = item.t_id; 
-                document.getElementById('label-therapist').innerText = name; 
-            }
-            if (type === 'therapist_seller') { 
-                selectedSellerId = item.t_id; 
-                document.getElementById('label-seller').innerText = "Oleh: " + name; 
-            }
-            if (type === 'service') { 
-                selectedPicker.sName = name; 
-                selectedPicker.sPrice = price; 
-                selectedPicker.sDur = item.dur || 60; 
-                document.getElementById('label-service').innerText = name; 
-            }
-            if (type === 'product') { 
-                selectedPicker.pName = name; 
-                selectedPicker.pPrice = price; 
-                document.getElementById('label-product').innerText = name; 
-            }
-            if (type === 'extra_service') {
-                selectedPicker.exSvc = name; 
-                selectedPicker.exPrice = price;
-                openPicker('extra_therapist');
-                return;
-            }
-            if (type === 'extra_therapist') {
-                addExtraToBill(item.t_id, name);
-            }
-            closePicker();
-        };
-
-        // Render Baris
-        tr.innerHTML = `
-            <td class="p-5">
-                <div class="font-black text-slate-700 uppercase">${item.name || item.nama_produk}</div>
-                <div class="text-[9px] text-slate-400 font-bold italic">${item.category || ''} | ${item.status || 'OFF'}</div>
-            </td>
-            <td class="p-5 text-right font-black text-blue-600">
-                ${price > 0 ? 'Rp ' + price.toLocaleString() : '-'}
-            </td>
-        `;
-        body.appendChild(tr);
-    });
-
-    document.getElementById('picker-title').innerText = type.replace('_', ' ').toUpperCase();
-    document.getElementById('picker-modal').classList.remove('hidden');
-}
         async function startSession() {
             if(!selectedPicker.tId || !selectedPicker.sName || !selectedGroName) return alert("Data Belum Lengkap!");
             const endTime = new Date(Date.now() + selectedPicker.sDur * 60000).toISOString();
@@ -415,8 +355,6 @@ function openPicker(type) {
                 staff_handle_id: selectedGroName
             };
             await _supabase.from('transaksi_spa').insert([payload]);
-            
-            // Print Otomatis Produk
             printSingleItem(payload.nama_item, payload.qty);
             fetchActiveBill(currentRoom.id);
         }
@@ -467,7 +405,7 @@ function openPicker(type) {
             document.getElementById('btn-access-confirm').onclick = async () => {
                 const pin = document.getElementById('access-pin').value;
                 const { data } = await _supabase.from('therapists').update({ status: 'standby' }).eq('t_id', pin).select();
-                if(data.length) { alert("Absensi Berhasil!"); closeAccessModal(); loadMasterData(); }
+                if(data?.length) { alert("Absensi Berhasil!"); closeAccessModal(); loadMasterData(); }
                 else { alert("ID Tidak Ditemukan!"); }
             };
         }
@@ -485,17 +423,12 @@ function openPicker(type) {
             const final = calculateFinalTotal();
             const payMethod = document.getElementById('db-payment-method').value;
             await _supabase.from('transaksi_spa').update({ 
-                status_bayar: 'completed', 
-                total_bayar: final, 
-                payment_method: payMethod,
-                checkout_at: new Date() 
+                status_bayar: 'completed', total_bayar: final, payment_method: payMethod, checkout_at: new Date() 
             }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
-            
             alert("Pembayaran Berhasil!");
             closePaymentModal(); closeModal(); init();
         }
 
-        // Helpers
         function closePicker() { document.getElementById('picker-modal').classList.add('hidden'); }
         function closeModal() { document.getElementById('pos-modal').classList.add('hidden'); }
         function openPaymentModal() { if(!activeOrders.length) return; document.getElementById('payment-modal').classList.remove('hidden'); calculateFinalTotal(); }
