@@ -309,9 +309,12 @@ function openPicker(type) {
             s.category && s.category.trim().toLowerCase() === 'therapist'
         );
 
-        // Khusus Layanan Utama, hanya tampilkan yang sudah Absensi (Status: Standby)
+        // Filter status standby hanya untuk 'therapist' utama (Mulai Massage)
+        // Jika ingin semua muncul tanpa harus absensi, baris di bawah ini bisa dikomentari
         if (type === 'therapist') {
-            data = data.filter(s => s.status && s.status.toLowerCase() === 'standby');
+            const standbyOnly = data.filter(s => s.status && s.status.toLowerCase() === 'standby');
+            // Jika ada yang standby tampilkan yang standby, jika tidak ada tampilkan semua (fallback)
+            if (standbyOnly.length > 0) data = standbyOnly;
         }
     } 
     else if (type === 'service' || type === 'extra_service') {
@@ -324,8 +327,8 @@ function openPicker(type) {
     // Tampilan jika data kosong
     if (data.length === 0) {
         let msg = "Data tidak ditemukan";
-        if (type === 'therapist') msg = "Therapist belum Absensi (Status Standby Kosong)";
-        if (type === 'gro') msg = "Kategori 'Staff' tidak ditemukan di database";
+        if (type === 'therapist') msg = "Therapist tidak ditemukan atau belum Absensi";
+        if (type === 'gro') msg = "Staff/GRO tidak ditemukan di database";
         
         body.innerHTML = `<tr><td colspan="2" class="p-10 text-center text-slate-400 font-bold uppercase text-[10px] italic">${msg}</td></tr>`;
     }
@@ -363,7 +366,7 @@ function openPicker(type) {
             if (type === 'extra_service') {
                 selectedPicker.exSvc = name; 
                 selectedPicker.exPrice = price;
-                openPicker('extra_therapist'); // Langsung buka pilih therapist untuk extra time
+                openPicker('extra_therapist');
                 return;
             }
             if (type === 'extra_therapist') {
@@ -372,10 +375,11 @@ function openPicker(type) {
             closePicker();
         };
 
+        // Render Baris
         tr.innerHTML = `
             <td class="p-5">
                 <div class="font-black text-slate-700 uppercase">${item.name || item.nama_produk}</div>
-                <div class="text-[9px] text-slate-400 font-bold italic">${item.category} | ${item.status || 'OFF'}</div>
+                <div class="text-[9px] text-slate-400 font-bold italic">${item.category || ''} | ${item.status || 'OFF'}</div>
             </td>
             <td class="p-5 text-right font-black text-blue-600">
                 ${price > 0 ? 'Rp ' + price.toLocaleString() : '-'}
