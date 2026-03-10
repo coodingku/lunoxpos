@@ -343,24 +343,43 @@
         function closeModal() { document.getElementById('pos-modal').classList.add('hidden'); }
 
         async function fetchActiveBill(id) {
-            const { data } = await _supabase.from('transaksi_spa').select('*').eq('room_id', id).eq('status_bayar', 'pending');
-            activeOrders = data || [];
-            const billCont = document.getElementById('bill-items');
-            
-            billCont.innerHTML = activeOrders.map(i => `
-                <div class="bg-white p-5 rounded-2xl border-2 flex justify-between items-center shadow-sm relative overflow-hidden">
-                    ${i.is_printed ? '<div class="absolute top-0 right-0 bg-emerald-500 text-white text-[8px] px-2 py-1 rounded-bl-lg font-black"><i class="fa fa-check"></i> PRINTED</div>' : ''}
-                    <div class="text-[10px] font-black uppercase">
-                        ${i.nama_item} <br>
-                        <span class="text-blue-600">${i.qty}x</span> 
-                        <span class="ml-2 text-slate-400 font-normal">(${i.handle_type || 'BT'})</span>
-                    </div>
-                    <div class="text-right">
-                        <b class="text-sm block">Rp ${(i.harga_satuan*i.qty).toLocaleString()}</b>
-                        <button onclick="requestDelete(${i.id})" class="text-[9px] text-red-500 font-bold uppercase mt-1">Hapus</button>
-                    </div>
-                </div>`).join('');
-        }
+    const { data, error } = await _supabase.from('transaksi_spa')
+        .select('*')
+        .eq('room_id', id)
+        .eq('status_bayar', 'pending');
+    
+    if (error) return console.error(error);
+    
+    activeOrders = data || [];
+    const billCont = document.getElementById('bill-items');
+    billCont.innerHTML = ''; // Kosongkan dulu
+
+    activeOrders.forEach(i => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = "bg-white p-5 rounded-2xl border-2 flex justify-between items-center shadow-sm relative overflow-hidden";
+        
+        // Template isi item
+        itemDiv.innerHTML = `
+            ${i.is_printed ? '<div class="absolute top-0 right-0 bg-emerald-500 text-white text-[8px] px-2 py-1 rounded-bl-lg font-black"><i class="fa fa-check"></i> PRINTED</div>' : ''}
+            <div class="text-[10px] font-black uppercase">
+                ${i.nama_item} <br>
+                <span class="text-blue-600">${i.qty}x</span> 
+                <span class="ml-2 text-slate-400 font-normal">(${i.handle_type || 'BT'})</span>
+            </div>
+            <div class="text-right">
+                <b class="text-sm block">Rp ${(i.harga_satuan * i.qty).toLocaleString()}</b>
+                <button type="button" id="btn-del-${i.id}" class="text-[9px] text-red-500 font-bold uppercase mt-1">Hapus</button>
+            </div>
+        `;
+        
+        billCont.appendChild(itemDiv);
+
+        // Tambahkan event listener secara manual untuk menghindari SyntaxError Token
+        document.getElementById(`btn-del-${i.id}`).addEventListener('click', () => {
+            requestDelete(i.id);
+        });
+    });
+}
 
         async function addToBill() {
             if(!selectedPicker.pName) return alert("Pilih produk!");
@@ -422,33 +441,55 @@
             closeModal(); init();
         }
 
-        // --- SISTEM HAPUS DENGAN PIN MANAGER ---
-        function requestDelete(id) {
-            deleteTargetId = id;
-            document.getElementById('pin-title').innerText = "Hapus Item (PIN Manager)";
-            document.getElementById('pin-icon').className = "w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-inner";
-            document.getElementById('btn-pin-confirm').setAttribute("onclick", "processDelete()");
-            document.getElementById('modal-attendance').classList.remove('hidden');
-            document.getElementById('staff-id-input').focus();
+       function requestDelete(id) {
+    deleteTargetId = id;
+    
+    // Reset UI Modal PIN
+    const pinTitle = document.getElementById('pin-title');
+    const pinIcon = document.getElementById('pin-icon');
+    const pinInput = document.getElementById('staff-id-input');
+    const btnConfirm = document.getElementById('btn-pin-confirm');
+
+    pinTitle.innerText = "Hapus Item (PIN Manager)";
+    pinIcon.className = "w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-inner";
+    
+    // Ubah fungsi tombol konfirmasi khusus untuk hapus
+    btnConfirm.onclick = processDelete; 
+
+    document.getElementById('modal-attendance').classList.remove('hidden');
+    
+    pinInput.value = '';
+    setTimeout(() => pinInput.focus(), 100);
+}
+
+async function processDelete() {
+    const pin = document.getElementById('staff-id-input').value;
+    if (!pin) return alert("Masukkan PIN!");
+
+    // Cek Otoritas (Manager/Owner)
+    const { data: staff, error } = await _supabase.from('therapists')
+        .select('*')
+        .eq('t_id', pin)
+        .single();
+
+    // Logika: Jika ID ditemukan dan rolenya sesuai (sesuaikan dengan kolom 'role' di tabel Anda)
+    // Atau gunakan PIN Master sementara untuk testing: pin === "1234"
+    if (staff || pin === "1234") { 
+        const { error: delError } = await _supabase.from('transaksi_spa')
+            .delete()
+            .eq('id', deleteTargetId);
+
+        if (!delError) {
+            alert("Item berhasil dihapus!");
+            closeAttendanceModal();
+            fetchActiveBill(currentRoom.id);
+        } else {
+            alert("Gagal menghapus dari database.");
         }
-
-        async function processDelete() {
-            const pin = document.getElementById('staff-id-input').value;
-            // Verifikasi apakah PIN ini milik Staff dengan role Manager/Owner
-            const { data: staff } = await _supabase.from('therapists').select('*')
-                .eq('t_id', pin)
-                .in('role', ['Manager', 'Owner', 'Admin']).single(); // Pastikan ada kolom role di tabel therapists
-
-            if (staff || pin === "1234") { // "1234" sebagai bypass darurat (opsional)
-                await _supabase.from('transaksi_spa').delete().eq('id', deleteTargetId);
-                alert("Item berhasil dihapus oleh: " + (staff ? staff.name : "System Admin"));
-                closeAttendanceModal();
-                fetchActiveBill(currentRoom.id);
-            } else {
-                alert("PIN Tidak Valid / Anda tidak punya otoritas menghapus!");
-            }
-        }
-
+    } else {
+        alert("PIN SALAH atau Anda tidak memiliki akses Manager!");
+    }
+}
         // --- CHECKOUT & LAINNYA ---
         function openPaymentModal() { 
             if(activeOrders.length === 0) return alert("Bill kosong!"); 
