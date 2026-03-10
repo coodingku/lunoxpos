@@ -33,7 +33,7 @@
             <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">ADVANCED SPA SYSTEM</p>
         </div>
         <div class="flex gap-4 items-center">
-            <button onclick="openAttendanceModal()" class="bg-slate-800 text-white px-5 py-2.5 rounded-2xl text-xs font-black hover:bg-black transition uppercase">Absensi</button>
+            <button onclick="openAttendanceModal()" class="bg-slate-800 text-white px-5 py-2.5 rounded-2xl text-xs font-black hover:bg-black transition uppercase">Absensi Staff</button>
             <select id="active-outlet" onchange="init()" class="bg-white border-2 border-slate-200 rounded-2xl px-4 py-2 text-xs font-black text-blue-600 outline-none cursor-pointer">
                 <option value="Delta">DELTA SPA</option>
                 <option value="Cabana">CABANA SPA</option>
@@ -64,7 +64,7 @@
                             <input type="text" id="input-guest-name" placeholder="Input Nama..." class="w-full bg-transparent font-bold text-slate-800 outline-none">
                         </div>
                         <button onclick="openPicker('gro')" class="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 text-left">
-                            <label class="text-[10px] font-black text-slate-400 uppercase">Staff / GRO</label>
+                            <label class="text-[10px] font-black text-slate-400 uppercase">Staff / GRO Handle</label>
                             <div id="label-gro" class="font-bold text-slate-800">Pilih GRO...</div>
                         </button>
                     </div>
@@ -72,7 +72,7 @@
                     <div class="bg-slate-50 p-6 rounded-[2.5rem] border-2 border-dashed border-slate-200">
                         <div class="flex justify-between items-center mb-4">
                             <label class="text-[10px] font-black text-slate-400 uppercase">Layanan Utama</label>
-                            <button onclick="openPicker('service_extra')" id="btn-extra-time" class="hidden bg-orange-500 text-white text-[10px] px-4 py-1 rounded-full font-black uppercase shadow-sm"> + Extra Time</button>
+                            <button onclick="openPicker('extra_service')" id="btn-extra-time" class="hidden bg-orange-500 text-white text-[10px] px-4 py-1 rounded-full font-black uppercase"> + Add Extra Time</button>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <button onclick="openPicker('therapist')" class="w-full p-5 bg-white border-2 rounded-2xl font-bold text-blue-600 text-left flex justify-between items-center">
@@ -84,14 +84,14 @@
                                 <i class="fa fa-spa opacity-30"></i>
                             </button>
                         </div>
-                        <button id="btn-start-massage" onclick="startSession()" class="w-full bg-blue-600 text-white py-5 mt-4 rounded-2xl font-black uppercase shadow-lg transition">Mulai Massage</button>
+                        <button id="btn-start-massage" onclick="startSession()" class="w-full bg-blue-600 text-white py-5 mt-4 rounded-2xl font-black uppercase shadow-lg hover:bg-blue-700">Mulai Massage</button>
                     </div>
 
                     <div class="bg-slate-50 p-6 rounded-[2.5rem] border-2 border-dashed border-slate-200">
-                        <label class="text-[10px] font-black text-slate-400 uppercase">Produk / F&B</label>
+                        <label class="text-[10px] font-black text-slate-400 uppercase">Tambahan Produk / F&B</label>
                         <div class="grid grid-cols-1 gap-3 mt-2">
                             <button onclick="openPicker('therapist_seller')" class="w-full p-4 bg-white border-2 rounded-2xl font-bold text-xs text-emerald-600 text-left flex justify-between items-center">
-                                <span id="label-seller">Pilih Staff Penjual...</span>
+                                <span id="label-seller">Pilih Penjual...</span>
                                 <i class="fa fa-tag opacity-30"></i>
                             </button>
                             <div class="flex gap-3">
@@ -99,7 +99,7 @@
                                     <span id="label-product">Cari Item...</span>
                                     <i class="fa fa-search opacity-30"></i>
                                 </button>
-                                <input type="number" id="input-qty" value="1" min="1" class="w-20 p-5 bg-white border-2 rounded-2xl font-black text-center">
+                                <input type="number" id="input-qty" value="1" min="1" class="w-20 p-5 bg-white border-2 rounded-2xl font-black text-center outline-none">
                                 <button onclick="addToBill()" class="bg-emerald-500 text-white px-8 rounded-2xl font-black shadow-lg"><i class="fa fa-plus"></i></button>
                             </div>
                         </div>
@@ -109,16 +109,18 @@
 
             <div class="w-full md:w-[450px] bg-slate-50 p-10 flex flex-col">
                 <div class="flex justify-between items-end mb-6">
-                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Bill Details</h3>
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Current Bill</h3>
                     <div class="text-right">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase">Total Bill</p>
-                        <p id="bill-total-display" class="text-2xl font-black text-blue-600">Rp 0</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase">Subtotal</p>
+                        <p id="bill-total-display" class="text-2xl font-black text-blue-600 tracking-tighter">Rp 0</p>
                     </div>
                 </div>
+                
                 <div id="bill-items" class="flex-1 overflow-y-auto space-y-4 pr-2"></div>
+                
                 <div class="border-t pt-6 mt-6 grid grid-cols-2 gap-4">
-                    <button onclick="checkoutRoom()" id="btn-checkout-room" class="bg-red-600 text-white py-6 rounded-[2rem] font-black uppercase tracking-widest shadow-xl hover:bg-red-700 transition">Checkout Room</button>
-                    <button onclick="openPaymentModal()" class="bg-slate-900 text-white py-6 rounded-[2rem] font-black uppercase tracking-widest shadow-xl hover:bg-black transition">Bayar</button>
+                    <button onclick="checkoutRoom()" id="btn-checkout-room" class="bg-red-600 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-xl">Checkout Room</button>
+                    <button onclick="openPaymentModal()" class="bg-slate-900 text-white py-6 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-xl">Bayar Bill</button>
                 </div>
             </div>
         </div>
@@ -139,60 +141,53 @@
         </div>
     </div>
 
+    <div id="modal-access" class="fixed inset-0 bg-slate-900/95 hidden z-[100] flex items-center justify-center p-4 backdrop-blur-xl">
+        <div class="bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl text-center">
+            <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-inner"><i class="fa fa-key"></i></div>
+            <h2 id="access-title" class="text-2xl font-black uppercase italic">Security Access</h2>
+            <p id="access-subtitle" class="text-xs text-slate-400 font-bold uppercase mb-4">Input PIN untuk otorisasi</p>
+            <input type="password" id="access-pin" placeholder="••••" class="w-full p-6 bg-slate-100 rounded-[2rem] text-center text-4xl font-black tracking-[1rem] outline-none my-6 border-2 border-slate-200">
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="closeAccessModal()" class="py-5 font-black text-slate-400 uppercase text-xs">Batal</button>
+                <button id="btn-access-confirm" class="bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-lg">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <div id="payment-modal" class="fixed inset-0 bg-blue-900/90 hidden z-[60] flex items-center justify-center p-4 backdrop-blur-xl">
         <div class="bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl">
-            <h2 class="text-2xl font-black text-center uppercase mb-8 italic">Checkout Payment</h2>
+            <h2 class="text-2xl font-black text-center uppercase mb-8 italic">Payment Checkout</h2>
             <div class="space-y-4 mb-8">
                 <div class="flex justify-between text-slate-500 font-bold text-xs uppercase"><span>Subtotal</span><span id="p-subtotal">0</span></div>
                 <div class="flex justify-between items-center text-red-500 font-bold text-xs uppercase">
                     <span>Diskon</span>
-                    <select id="db-discount" onchange="calculateTotal()" class="bg-red-50 rounded-lg px-2 py-1 font-black outline-none cursor-pointer">
+                    <select id="db-discount" onchange="calculateFinalTotal()" class="bg-red-50 rounded-lg px-2 py-1 font-black outline-none cursor-pointer">
                         <option value="0">0%</option>
                     </select>
-                </div>
-                <div id="tax-details" class="space-y-1 text-[10px] text-slate-400 font-bold uppercase border-t pt-2">
-                    <div class="flex justify-between"><span>Service (5%)</span><span id="p-service">0</span></div>
-                    <div class="flex justify-between"><span>PPN (11%)</span><span id="p-ppn">0</span></div>
                 </div>
                 <div class="pt-6 border-t-2 border-dashed flex justify-between items-center font-black">
                     <span class="text-slate-800 text-lg uppercase">Total Akhir</span>
                     <span id="p-grand-total" class="text-4xl text-blue-600 tracking-tighter">0</span>
                 </div>
             </div>
-            <div class="space-y-4">
-                <select id="db-payment-method" class="w-full p-5 bg-slate-100 rounded-2xl font-black outline-none text-center text-lg"></select>
-                <div class="grid grid-cols-2 gap-4 pt-4">
-                    <button onclick="closePaymentModal()" class="py-5 font-black text-slate-400 uppercase text-xs">Batal</button>
-                    <button onclick="processCheckout()" class="bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-lg">Print & Selesai</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-attendance" class="fixed inset-0 bg-slate-900/95 hidden z-[100] flex items-center justify-center p-4 backdrop-blur-xl">
-        <div class="bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl text-center">
-            <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl shadow-inner"><i class="fa fa-fingerprint"></i></div>
-            <h2 id="access-modal-title" class="text-2xl font-black uppercase">Staff Access</h2>
-            <input type="password" id="staff-id-input" placeholder="••••" class="w-full p-6 bg-slate-100 rounded-[2rem] text-center text-4xl font-black tracking-[1rem] outline-none my-6 border-2 border-slate-200">
+            <select id="db-payment-method" class="w-full p-5 bg-slate-100 rounded-2xl font-black outline-none text-center text-lg mb-6"></select>
             <div class="grid grid-cols-2 gap-4">
-                <button onclick="closeAttendanceModal()" class="py-5 font-black text-slate-400 uppercase text-xs">Batal</button>
-                <button id="btn-access-confirm" class="bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-lg">Konfirmasi</button>
+                <button onclick="closePaymentModal()" class="py-5 font-black text-slate-400 uppercase text-xs">Batal</button>
+                <button onclick="processFinalPayment()" class="bg-blue-600 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-lg">Pay & Print</button>
             </div>
         </div>
     </div>
 
     <div id="thermal-receipt" class="hidden font-mono text-[10px] w-[58mm] bg-white text-black p-2">
-        <div class="text-center font-bold text-xs mb-1 italic">LUNOX SPA</div>
+        <div class="text-center font-bold text-xs mb-1 italic tracking-widest">LUNOX SPA</div>
         <div id="r-outlet" class="text-center mb-2 uppercase text-[8px]">---</div>
-        <div id="r-date" class="text-center mb-2 text-[7px]">---</div>
-        <div id="r-guest" class="text-[8px] mb-1">GUEST: ---</div>
         <div class="border-b border-dashed mb-2"></div>
+        <div id="r-info" class="mb-2 text-[7px] space-y-1"></div>
         <div id="r-items-list" class="space-y-1 mb-2"></div>
         <div class="border-t border-dashed pt-2 space-y-1">
-            <div class="flex justify-between"><span>SUBTOTAL</span><span id="r-subtotal"></span></div>
-            <div class="flex justify-between font-bold text-xs"><span>TOTAL</span><span id="r-total"></span></div>
+            <div class="flex justify-between"><span>TOTAL</span><span id="r-total"></span></div>
         </div>
-        <div class="text-center mt-4 text-[7px]">TERIMA KASIH</div>
+        <div class="text-center mt-4 text-[7px] uppercase font-bold italic">Generated by Lunox POS</div>
     </div>
 
     <script>
@@ -201,8 +196,8 @@
         const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
         let currentRoom = null, activeOrders = [], masterRoomsData = [];
-        let masterStaffs = [], masterTherapists = [], masterServices = [], masterProducts = [];
-        let selectedPicker = {}, selectedSellerId = null, selectedGroId = null;
+        let masterAllStaff = [], masterServices = [], masterProducts = [];
+        let selectedPicker = {}, selectedSellerId = null, selectedGroName = null;
 
         async function init() {
             await fetchSettings();
@@ -219,10 +214,9 @@
 
         async function loadMasterData() {
             const out = document.getElementById('active-outlet').value;
-            const { data: tps } = await _supabase.from('therapists').select('*').eq('outlet_name', out);
-            masterTherapists = tps?.filter(t => t.kategori === 'Therapist') || [];
-            masterStaffs = tps?.filter(t => t.kategori !== 'Therapist') || [];
-            const { data: svc } = await _supabase.from('services').select('*').eq('outlet_name', out).order('name');
+            const { data: staff } = await _supabase.from('therapists').select('*').eq('outlet_name', out);
+            masterAllStaff = staff || [];
+            const { data: svc } = await _supabase.from('services').select('*').eq('outlet_name', out);
             masterServices = svc || [];
             const { data: pd } = await _supabase.from('produk').select('*').eq('outlet_name', out);
             masterProducts = pd || [];
@@ -231,38 +225,34 @@
         async function loadRoomMap() {
             const out = document.getElementById('active-outlet').value;
             const { data: rooms } = await _supabase.from('rooms').select('*').eq('outlet_name', out).order('name');
-            const { data: activeTrans } = await _supabase.from('transaksi_spa').select('room_id, guest_name, staff_handle_id').eq('status_bayar', 'pending').eq('outlet_name', out);
+            const { data: activeTrans } = await _supabase.from('transaksi_spa').select('room_id, guest_name').eq('status_bayar', 'pending').eq('outlet_name', out);
             
-            masterRoomsData = rooms || [];
-            const grid = document.getElementById('room-grid'); 
-            grid.innerHTML = '';
-            
-            masterRoomsData.forEach(r => {
+            const grid = document.getElementById('room-grid'); grid.innerHTML = '';
+            rooms.forEach(r => {
                 const session = activeTrans?.find(t => t.room_id === r.id);
                 const isOcc = r.status === 'occupied';
                 let style = isOcc ? 'room-progress' : (session ? 'room-pending' : 'room-standby');
                 
                 const card = document.createElement('div');
-                card.className = `${style} p-6 rounded-[2.5rem] text-center shadow-lg transition-all cursor-pointer min-h-[180px] flex flex-col justify-between`;
+                card.className = `${style} p-6 rounded-[2.5rem] shadow-lg transition-all cursor-pointer min-h-[170px] flex flex-col justify-between`;
                 card.onclick = () => openModal(r, session);
                 card.innerHTML = `
                     <div>
-                        <div class="text-[9px] font-black uppercase opacity-60 mb-1 tracking-widest">${isOcc ? 'IN PROGRESS' : (session ? 'WAITING CHECKOUT' : 'READY')}</div>
+                        <div class="text-[9px] font-black uppercase opacity-60 tracking-widest">${isOcc ? 'MASSAGE' : (session ? 'PENDING' : 'READY')}</div>
                         <h3 class="font-black text-3xl italic tracking-tighter">${r.name}</h3>
                     </div>
-                    ${session ? `<div class="mt-2 pt-2 border-t border-white/20 text-[10px] font-black uppercase truncate"><i class="fa fa-user mr-1"></i> ${session.guest_name}</div>` : ''}
+                    ${session ? `<div class="text-[10px] font-black uppercase truncate border-t border-white/20 pt-2"><i class="fa fa-user mr-1"></i> ${session.guest_name}</div>` : ''}
                 `;
                 grid.appendChild(card);
             });
         }
 
         function openModal(r, session) { 
-            currentRoom = r; 
-            selectedPicker = {}; selectedGroId = session?.staff_handle_id || null;
-            document.getElementById('modal-room-name').innerText = r.name; 
+            currentRoom = r; selectedPicker = {};
+            document.getElementById('modal-room-name').innerText = r.name;
             document.getElementById('input-guest-name').value = session?.guest_name || '';
-            document.getElementById('label-gro').innerText = session?.staff_handle_id || "Pilih GRO...";
             
+            // UI Reset
             const isOcc = r.status === 'occupied';
             document.getElementById('room-status-badge').innerText = isOcc ? "Massage Progress" : "Available";
             document.getElementById('btn-start-massage').style.display = isOcc ? 'none' : 'block';
@@ -276,15 +266,13 @@
             const { data } = await _supabase.from('transaksi_spa').select('*').eq('room_id', id).eq('status_bayar', 'pending');
             activeOrders = data || [];
             let total = 0;
-            const billCont = document.getElementById('bill-items');
-            billCont.innerHTML = activeOrders.map(i => {
+            document.getElementById('bill-items').innerHTML = activeOrders.map(i => {
                 total += (i.harga_satuan * i.qty);
-                return `
-                <div class="bg-white p-5 rounded-2xl border-2 flex justify-between items-center shadow-sm">
+                return `<div class="bg-white p-5 rounded-3xl border-2 flex justify-between items-center">
                     <div class="text-[10px] font-black uppercase">${i.nama_item}<br><span class="text-blue-600">${i.qty}x</span></div>
                     <div class="text-right">
                         <b class="text-sm block">Rp ${(i.harga_satuan*i.qty).toLocaleString()}</b>
-                        <button onclick="requestDeleteAccess(${i.id})" class="text-[9px] text-red-500 font-bold uppercase mt-1">Hapus</button>
+                        <button onclick="reqDelete(${i.id})" class="text-[9px] text-red-500 font-bold uppercase mt-1">Hapus</button>
                     </div>
                 </div>`}).join('');
             document.getElementById('bill-total-display').innerText = `Rp ${total.toLocaleString()}`;
@@ -292,136 +280,164 @@
 
         function openPicker(type) {
             selectedPicker.type = type;
-            const body = document.getElementById('picker-table-body'); 
-            body.innerHTML = '';
+            const body = document.getElementById('picker-table-body'); body.innerHTML = '';
             let data = [];
-            if(type === 'gro') data = masterStaffs;
-            else if(type === 'therapist') data = masterTherapists.filter(t => t.status === 'standby');
-            else if(type === 'therapist_seller') data = masterTherapists;
-            else if(type === 'service' || type === 'service_extra') data = masterServices;
-            else data = masterProducts;
+
+            // FILTER LOGIKA STAFF VS THERAPIST
+            if(type === 'gro') {
+                data = masterAllStaff.filter(s => s.category !== 'Therapist'); // Hanya Staff/GRO/Admin
+            } else if(type === 'therapist' || type === 'therapist_seller' || type === 'extra_therapist') {
+                data = masterAllStaff.filter(s => s.category === 'Therapist'); // Hanya Therapist
+            } else if(type === 'service' || type === 'extra_service') {
+                data = masterServices;
+            } else {
+                data = masterProducts;
+            }
 
             data.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "border-b hover:bg-blue-50 cursor-pointer";
                 tr.onclick = () => {
-                    if(type === 'gro') { selectedGroId = item.name; document.getElementById('label-gro').innerText = item.name; }
+                    if(type === 'gro') { selectedGroName = item.name; document.getElementById('label-gro').innerText = item.name; }
                     if(type === 'therapist') { selectedPicker.tId = item.t_id; document.getElementById('label-therapist').innerText = item.name; }
-                    if(type === 'therapist_seller') { selectedSellerId = item.t_id; document.getElementById('label-seller').innerText = "Penjual: " + item.name; }
-                    if(type === 'service' || type === 'service_extra') { 
+                    if(type === 'therapist_seller') { selectedSellerId = item.t_id; document.getElementById('label-seller').innerText = "Oleh: " + item.name; }
+                    if(type === 'service') { 
                         selectedPicker.sName = item.name; selectedPicker.sPrice = item.price; selectedPicker.sDur = item.dur; 
-                        selectedPicker.comType = item.commission_type; selectedPicker.comValue = item.commission_value;
                         document.getElementById('label-service').innerText = item.name; 
-                        if(type === 'service_extra') openPicker('therapist'); // Chain extra time to therapist picker
                     }
                     if(type === 'product') { 
-                        selectedPicker.pName = item.nama_produk; selectedPicker.pPrice = item.harga;
-                        selectedPicker.comType = item.commission_type; selectedPicker.comValue = item.commission_value;
+                        selectedPicker.pName = item.nama_produk; selectedPicker.pPrice = item.harga; 
                         document.getElementById('label-product').innerText = item.nama_produk; 
+                    }
+                    if(type === 'extra_service') {
+                        selectedPicker.exSvc = item.name; selectedPicker.exPrice = item.price;
+                        openPicker('extra_therapist'); return; // Lanjut pilih therapist setelah pilih service extra
+                    }
+                    if(type === 'extra_therapist') {
+                        addExtraToBill(item.t_id, item.name);
                     }
                     closePicker();
                 };
                 tr.innerHTML = `<td class="p-5 uppercase">${item.name || item.nama_produk}</td><td class="p-5 text-right font-black">${(item.price || item.harga || 0).toLocaleString()}</td>`;
                 body.appendChild(tr);
             });
+            document.getElementById('picker-title').innerText = type.replace('_',' ').toUpperCase();
             document.getElementById('picker-modal').classList.remove('hidden');
         }
 
-        async function addToBill() {
-            if(!selectedPicker.pName || !selectedSellerId) return alert("Pilih produk & penjual!");
-            const out = document.getElementById('active-outlet').value;
-            const item = { 
-                room_id: currentRoom.id, nama_item: selectedPicker.pName, harga_satuan: selectedPicker.pPrice, 
-                qty: parseInt(document.getElementById('input-qty').value), status_bayar: 'pending', 
-                outlet_name: out, therapist_id: selectedSellerId, guest_name: document.getElementById('input-guest-name').value,
-                staff_handle_id: selectedGroId
-            };
-            await _supabase.from('transaksi_spa').insert([item]);
-            
-            // Print otomatis produk
-            document.getElementById('r-outlet').innerText = out;
-            document.getElementById('r-date').innerText = new Date().toLocaleString();
-            document.getElementById('r-items-list').innerHTML = `<div>${item.nama_item} x${item.qty}</div>`;
-            window.print();
-            
-            fetchActiveBill(currentRoom.id);
-        }
-
         async function startSession() {
-            if(!selectedPicker.tId || !selectedPicker.sName || !selectedGroId) return alert("Lengkapi data!");
-            const end = new Date(Date.now() + selectedPicker.sDur * 60000).toISOString();
-            await _supabase.from('rooms').update({ status: 'occupied', therapist_id: selectedPicker.tId, end_time: end }).eq('id', currentRoom.id);
-            await _supabase.from('therapists').update({ status: 'progress', end_time: end }).eq('t_id', selectedPicker.tId);
+            if(!selectedPicker.tId || !selectedPicker.sName || !selectedGroName) return alert("Data Belum Lengkap!");
+            const endTime = new Date(Date.now() + selectedPicker.sDur * 60000).toISOString();
+            
+            await _supabase.from('rooms').update({ status: 'occupied', therapist_id: selectedPicker.tId, end_time: endTime }).eq('id', currentRoom.id);
+            await _supabase.from('therapists').update({ status: 'progress', end_time: endTime }).eq('t_id', selectedPicker.tId);
             await _supabase.from('transaksi_spa').insert([{ 
                 room_id: currentRoom.id, nama_item: selectedPicker.sName, harga_satuan: selectedPicker.sPrice, qty: 1, 
                 status_bayar: 'pending', outlet_name: document.getElementById('active-outlet').value, 
-                therapist_id: selectedPicker.tId, guest_name: document.getElementById('input-guest-name').value, 
-                staff_handle_id: selectedGroId, commission_type: selectedPicker.comType, commission_value: selectedPicker.comValue
+                therapist_id: selectedPicker.tId, guest_name: document.getElementById('input-guest-name').value, staff_handle_id: selectedGroName
             }]);
             closeModal(); init();
         }
 
-        function requestDeleteAccess(id) {
-            document.getElementById('access-modal-title').innerText = "Otoritas Hapus";
-            document.getElementById('modal-attendance').classList.remove('hidden');
-            document.getElementById('staff-id-input').focus();
-            document.getElementById('btn-access-confirm').onclick = () => confirmDelete(id);
+        async function addToBill() {
+            if(!selectedPicker.pName || !selectedSellerId) return alert("Pilih Produk & Penjual!");
+            const out = document.getElementById('active-outlet').value;
+            const payload = { 
+                room_id: currentRoom.id, nama_item: selectedPicker.pName, harga_satuan: selectedPicker.pPrice, 
+                qty: parseInt(document.getElementById('input-qty').value), status_bayar: 'pending', 
+                outlet_name: out, therapist_id: selectedSellerId, guest_name: document.getElementById('input-guest-name').value,
+                staff_handle_id: selectedGroName
+            };
+            await _supabase.from('transaksi_spa').insert([payload]);
+            
+            // Print Otomatis Produk
+            printSingleItem(payload.nama_item, payload.qty);
+            fetchActiveBill(currentRoom.id);
         }
 
-        async function confirmDelete(id) {
-            const pin = document.getElementById('staff-id-input').value;
-            const { data: staff } = await _supabase.from('therapists').select('*').eq('t_id', pin).single();
-            if(staff) {
-                await _supabase.from('transaksi_spa').delete().eq('id', id);
-                closeAttendanceModal(); fetchActiveBill(currentRoom.id);
-            } else { alert("PIN Salah!"); }
+        async function addExtraToBill(tId, tName) {
+            const payload = { 
+                room_id: currentRoom.id, nama_item: `[EXTRA] ${selectedPicker.exSvc}`, harga_satuan: selectedPicker.exPrice, 
+                qty: 1, status_bayar: 'pending', outlet_name: document.getElementById('active-outlet').value, 
+                therapist_id: tId, guest_name: document.getElementById('input-guest-name').value, staff_handle_id: selectedGroName
+            };
+            await _supabase.from('transaksi_spa').insert([payload]);
+            fetchActiveBill(currentRoom.id);
+        }
+
+        function printSingleItem(name, qty) {
+            document.getElementById('r-outlet').innerText = document.getElementById('active-outlet').value;
+            document.getElementById('r-info').innerText = `ORDER: ${new Date().toLocaleTimeString()}\nROOM: ${currentRoom.name}`;
+            document.getElementById('r-items-list').innerHTML = `<div class="flex justify-between"><span>${name}</span><span>x${qty}</span></div>`;
+            document.getElementById('r-total').innerText = "NEW ORDER";
+            window.print();
+        }
+
+        function reqDelete(id) {
+            document.getElementById('access-title').innerText = "Hapus Item";
+            document.getElementById('modal-access').classList.remove('hidden');
+            document.getElementById('access-pin').focus();
+            document.getElementById('btn-access-confirm').onclick = async () => {
+                const pin = document.getElementById('access-pin').value;
+                const { data } = await _supabase.from('therapists').select('*').eq('t_id', pin).single();
+                if(data) {
+                    await _supabase.from('transaksi_spa').delete().eq('id', id);
+                    closeAccessModal(); fetchActiveBill(currentRoom.id);
+                } else { alert("PIN SALAH!"); }
+            };
         }
 
         async function checkoutRoom() {
-            if(!confirm("Checkout room ini?")) return;
-            const { data: rData } = await _supabase.from('rooms').select('therapist_id').eq('id', currentRoom.id).single();
-            if(rData?.therapist_id) await _supabase.from('therapists').update({ status: 'standby', end_time: null }).eq('t_id', rData.therapist_id);
+            if(!confirm("Kosongkan Room & Set Therapist ke Standby?")) return;
+            const { data: r } = await _supabase.from('rooms').select('therapist_id').eq('id', currentRoom.id).single();
+            if(r?.therapist_id) await _supabase.from('therapists').update({ status: 'standby', end_time: null }).eq('t_id', r.therapist_id);
             await _supabase.from('rooms').update({ status: 'available', therapist_id: null, end_time: null }).eq('id', currentRoom.id);
             closeModal(); init();
         }
 
-        async function processCheckout() {
-            const totals = await calculateTotal();
-            const pay = document.getElementById('db-payment-method').value;
-            await _supabase.from('transaksi_spa').update({ status_bayar: 'completed', total_bayar: totals.grandTotal, payment_method: pay, checkout_at: new Date() }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
-            // Room tidak otomatis available di sini, harus klik Checkout Room manual (sesuai permintaan)
-            alert("Pembayaran Berhasil. Silahkan Checkout Room.");
+        function openAttendanceModal() {
+            document.getElementById('access-title').innerText = "Staff Attendance";
+            document.getElementById('modal-access').classList.remove('hidden');
+            document.getElementById('btn-access-confirm').onclick = async () => {
+                const pin = document.getElementById('access-pin').value;
+                const { data } = await _supabase.from('therapists').update({ status: 'standby' }).eq('t_id', pin).select();
+                if(data.length) { alert("Absensi Berhasil!"); closeAccessModal(); loadMasterData(); }
+                else { alert("ID Tidak Ditemukan!"); }
+            };
+        }
+
+        function calculateFinalTotal() {
+            const sub = activeOrders.reduce((a, b) => a + (b.harga_satuan * b.qty), 0);
+            const disc = parseInt(document.getElementById('db-discount').value);
+            const total = sub - (sub * disc / 100);
+            document.getElementById('p-subtotal').innerText = `Rp ${sub.toLocaleString()}`;
+            document.getElementById('p-grand-total').innerText = `Rp ${total.toLocaleString()}`;
+            return total;
+        }
+
+        async function processFinalPayment() {
+            const final = calculateFinalTotal();
+            const payMethod = document.getElementById('db-payment-method').value;
+            await _supabase.from('transaksi_spa').update({ 
+                status_bayar: 'completed', 
+                total_bayar: final, 
+                payment_method: payMethod,
+                checkout_at: new Date() 
+            }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
+            
+            alert("Pembayaran Berhasil!");
             closePaymentModal(); closeModal(); init();
         }
 
-        // Helper functions
+        // Helpers
         function closePicker() { document.getElementById('picker-modal').classList.add('hidden'); }
         function closeModal() { document.getElementById('pos-modal').classList.add('hidden'); }
-        function openPaymentModal() { if(activeOrders.length === 0) return alert("Bill kosong!"); document.getElementById('payment-modal').classList.remove('hidden'); calculateTotal(); }
+        function openPaymentModal() { if(!activeOrders.length) return; document.getElementById('payment-modal').classList.remove('hidden'); calculateFinalTotal(); }
         function closePaymentModal() { document.getElementById('payment-modal').classList.add('hidden'); }
-        function openAttendanceModal() { 
-            document.getElementById('access-modal-title').innerText = "Staff Attendance";
-            document.getElementById('modal-attendance').classList.remove('hidden'); 
-            document.getElementById('btn-access-confirm').onclick = processAbsensi;
-        }
-        function closeAttendanceModal() { document.getElementById('modal-attendance').classList.add('hidden'); document.getElementById('staff-id-input').value = ''; }
-        async function processAbsensi() {
-            const pin = document.getElementById('staff-id-input').value;
-            const { data: staff } = await _supabase.from('therapists').update({ status: 'standby' }).eq('t_id', pin).select().single();
-            if(staff) { alert("Absensi Berhasil!"); closeAttendanceModal(); loadMasterData(); }
-            else { alert("ID tidak dikenal."); }
-        }
-
-        async function calculateTotal() {
-            const sub = activeOrders.reduce((a, b) => a + (b.harga_satuan * b.qty), 0);
-            const disc = parseFloat(document.getElementById('db-discount').value) || 0;
-            const afterDisc = sub - (sub * disc / 100);
-            const serv = afterDisc * 0.05;
-            const ppn = (afterDisc + serv) * 0.11;
-            const grand = Math.round(afterDisc + serv + ppn);
-            document.getElementById('p-subtotal').innerText = sub.toLocaleString();
-            document.getElementById('p-grand-total').innerText = grand.toLocaleString();
-            return { sub, grandTotal: grand };
+        function closeAccessModal() { document.getElementById('modal-access').classList.add('hidden'); document.getElementById('access-pin').value = ''; }
+        function filterPicker() {
+            const val = document.getElementById('picker-search').value.toLowerCase();
+            document.querySelectorAll('#picker-table-body tr').forEach(r => r.style.display = r.innerText.toLowerCase().includes(val) ? '' : 'none');
         }
 
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('id-ID'); }, 1000);
