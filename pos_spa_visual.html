@@ -195,16 +195,50 @@
             setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString('id-ID'); }, 1000);
         }
 
-        async function loadMasterData() {
-            const out = document.getElementById('active-outlet').value;
-            
-            // 1. Ambil Config Pajak & Diskon dari tabel outlet_configs
-            const { data: config } = await _supabase.from('outlet_configs').select('*').eq('outlet_name', out).single();
-            if (config) {
-                taxRate = config.ppn_percent || 0;
-                discRate = config.discount_percent || 0;
-                serviceRate = config.service_percent || 0; // Pastikan kolom ini ada di DB
-            }
+       async function loadMasterData() {
+    const out = document.getElementById('active-outlet').value;
+    
+    // 1. Ambil Config PPN & Service dari tabel 'settings'
+    // Mengasumsikan ada 1 baris setting per outlet
+    const { data: config } = await _supabase.from('settings').select('*').limit(1).single();
+    if (config) {
+        taxRate = config.ppn || 0; // Mengambil kolom 'ppn' dari gambar
+        serviceRate = config.service || 0; // Mengambil kolom 'service' dari gambar
+    }
+
+    // 2. Ambil Master Data (Therapist, Service, Produk)
+    const { data: tps } = await _supabase.from('therapists').select('*').eq('outlet_name', out);
+    masterTherapists = tps || [];
+    
+    const { data: svc } = await _supabase.from('services').select('*').eq('outlet_name', out);
+    masterServices = svc || [];
+    
+    const { data: pd } = await _supabase.from('produk').select('*').eq('outlet_name', out);
+    masterProducts = pd || [];
+
+    // 3. Ambil Data Bank untuk Tombol Pembayaran
+    const { data: banks } = await _supabase.from('banks').select('*').eq('is_active', true);
+    renderBankButtons(banks || []);
+}
+
+// Fungsi baru untuk membuat tombol bank secara dinamis
+function renderBankButtons(banks) {
+    const container = document.querySelector('.grid.grid-cols-3.gap-2.mb-10');
+    // Bersihkan kecuali tombol CASH
+    container.innerHTML = `<button onclick="setMethod('CASH')" id="btn-cash" class="pay-method-btn p-5 border-2 rounded-2xl font-bold bg-blue-600 text-white border-blue-600 shadow-lg">CASH</button>`;
+    
+    banks.forEach(bank => {
+        const btn = document.createElement('button');
+        btn.id = `btn-${bank.name.toLowerCase()}`;
+        btn.className = "pay-method-btn p-5 border-2 rounded-2xl font-bold border-slate-200 text-slate-400";
+        btn.innerText = bank.name.toUpperCase();
+        btn.onclick = () => {
+            setMethod(bank.name.toUpperCase());
+            selectedBankId = bank.id; // Simpan ID bank yang dipilih
+        };
+        container.appendChild(btn);
+    });
+}
 
             const { data: tps } = await _supabase.from('therapists').select('*').eq('outlet_name', out);
             masterTherapists = tps || [];
@@ -312,22 +346,25 @@
             document.getElementById('label-change').innerText = `Rp ${(change < 0 ? 0 : change).toLocaleString()}`;
         }
 
-        async function finalizePayment() {
-            const payAmount = parseInt(document.getElementById('input-pay-amount').value) || 0;
-            if (currentPaymentMethod === 'CASH' && payAmount < finalAmountToPay) return alert("Uang Kurang!");
+     async function finalizePayment() {
+    const payAmount = parseInt(document.getElementById('input-pay-amount').value) || 0;
+    if (currentPaymentMethod === 'CASH' && payAmount < finalAmountToPay) return alert("Uang Kurang!");
 
-            await _supabase.from('transaksi_spa').update({ 
-                status_bayar: 'paid', 
-                metode_bayar: currentPaymentMethod,
-                total_bayar: finalAmountToPay,
-                waktu_bayar: new Date().toISOString()
-            }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
+    // Update Transaksi ke Database
+    await _supabase.from('transaksi_spa').update({ 
+        status_bayar: 'paid', 
+        metode_bayar: currentPaymentMethod,
+        bank_id: currentPaymentMethod === 'CASH' ? null : selectedBankId, // Integrasi bank_id
+        total_bayar: finalAmountToPay,
+        waktu_bayar: new Date().toISOString()
+    }).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
 
-            await _supabase.from('rooms').update({ status: 'standby', therapist_id: null, end_time: null }).eq('id', currentRoom.id);
-            alert("Pembayaran Berhasil!");
-            location.reload();
-        }
-
+    // Reset status kamar & therapist
+    await _supabase.from('rooms').update({ status: 'standby', therapist_id: null, end_time: null }).eq('id', currentRoom.id);
+    
+    alert("Pembayaran Berhasil!");
+    location.reload();
+}
         // GENERIC HELPERS
         function closeModal() { document.getElementById('pos-modal').classList.add('hidden'); }
         function closePicker() { document.getElementById('picker-modal').classList.add('hidden'); }
@@ -360,6 +397,22 @@
                 body.appendChild(tr);
             });
         }
+
+        // FIX: Tombol Hapus Item
+async function cancelItem(id) {
+    if(!confirm("Hapus item ini dari bill?")) return;
+    
+    const { error } = await _supabase
+        .from('transaksi_spa')
+        .delete()
+        .eq('id', id);
+
+    if(error) {
+        alert("Gagal menghapus: " + error.message);
+    } else {
+        fetchActiveBill(currentRoom.id);
+    }
+}
 
         async function startSession() {
             if(!selectedStaffHandleId || !selectedPicker.tId || !selectedPicker.sName) return alert("Pilih Staff, Therapist & Layanan!");
