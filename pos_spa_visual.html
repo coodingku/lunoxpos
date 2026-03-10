@@ -183,26 +183,26 @@ const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const _supabase = supabase.createClient(SB_URL, SB_KEY);
 
 let currentRoom = null, activeOrders = [], masterTherapists = [], masterServices = [], masterProducts = [];
-let pickerCurrentData = [], selectedPicker = {}, selectedSellerId = null, selectedStaffHandleId = null, selectedExtra = {};
-let currentPaymentMethod = 'CASH', currentTotalBill = 0, finalAmountToPay = 0;
-let taxRate = 11, discRate = 0;
+let pickerCurrentData = [], selectedPicker = {}, selectedSellerId = null, selectedStaffHandleId = null;
+let currentPaymentMethod = 'CASH', currentTotalBill = 0, selectedBankId = null;
+let taxRate = 0, discRate = 0, serviceRate = 0, finalAmountToPay = 0;
 
 async function init() {
     await loadMasterData();
     await loadRoomMap();
     setInterval(loadRoomMap, 10000);
     setInterval(() => { 
-        const clockEl = document.getElementById('clock');
-        if(clockEl) clockEl.innerText = new Date().toLocaleTimeString('id-ID'); 
+        if(document.getElementById('clock')) document.getElementById('clock').innerText = new Date().toLocaleTimeString('id-ID'); 
     }, 1000);
 }
 
 async function loadMasterData() {
     const out = document.getElementById('active-outlet').value;
-    const { data: config } = await _supabase.from('outlet_configs').select('*').eq('outlet_name', out).maybeSingle();
+    const { data: config } = await _supabase.from('settings').select('*').limit(1).single();
     if (config) {
-        taxRate = config.ppn_percent || 0;
-        discRate = config.discount_percent || 0;
+        taxRate = config.ppn || 0;
+        serviceRate = config.service || 0;
+        discRate = config.discount || 0;
     }
     const { data: tps } = await _supabase.from('therapists').select('*').eq('outlet_name', out);
     masterTherapists = tps || [];
@@ -210,6 +210,22 @@ async function loadMasterData() {
     masterServices = svc || [];
     const { data: pd } = await _supabase.from('produk').select('*').eq('outlet_name', out);
     masterProducts = pd || [];
+    const { data: banks } = await _supabase.from('banks').select('*').eq('is_active', true);
+    renderBankButtons(banks || []);
+}
+
+function renderBankButtons(banks) {
+    const container = document.querySelector('.grid.grid-cols-3.gap-2.mb-10');
+    if(!container) return;
+    container.innerHTML = `<button onclick="setMethod('CASH')" id="btn-cash" class="pay-method-btn p-5 border-2 rounded-2xl font-bold bg-blue-600 text-white border-blue-600 shadow-lg">CASH</button>`;
+    banks.forEach(bank => {
+        const btn = document.createElement('button');
+        btn.id = `btn-${bank.name.toLowerCase().replace(/\s/g, '')}`;
+        btn.className = "pay-method-btn p-5 border-2 rounded-2xl font-bold border-slate-200 text-slate-400";
+        btn.innerText = bank.name.toUpperCase();
+        btn.onclick = () => { setMethod(bank.name.toUpperCase()); selectedBankId = bank.id; };
+        container.appendChild(btn);
+    });
 }
 
 async function loadRoomMap() {
@@ -218,7 +234,6 @@ async function loadRoomMap() {
     const grid = document.getElementById('room-grid'); 
     if(!grid) return;
     grid.innerHTML = '';
-    
     (rooms || []).forEach(r => {
         let statusClass = 'room-standby', timeLabel = 'READY';
         if (r.status === 'occupied' && r.end_time) {
@@ -227,27 +242,49 @@ async function loadRoomMap() {
             else if (diff <= 10) { statusClass = 'room-warning'; timeLabel = diff + 'm Left'; }
             else { statusClass = 'room-progress'; timeLabel = diff + 'm Left'; }
         } else if (r.status === 'checked_out') { statusClass = 'room-checkedout'; timeLabel = 'WAITING BILL'; }
-
         const card = document.createElement('div');
-        card.className = `${statusClass} p-8 rounded-[2.5rem] text-center shadow-xl cursor-pointer transform hover:-translate-y-1 transition duration-300`;
+        card.className = `${statusClass} p-8 rounded-[2.5rem] text-center shadow-xl cursor-pointer transform hover:-translate-y-1 transition`;
         card.onclick = () => openModal(r);
-        card.innerHTML = `<div class="text-[9px] font-black opacity-60 uppercase tracking-widest">${timeLabel}</div><h3 class="font-black text-2xl italic tracking-tighter">${r.name}</h3>`;
+        card.innerHTML = `<div class="text-[9px] font-black opacity-60 uppercase">${timeLabel}</div><h3 class="font-black text-2xl italic tracking-tighter">${r.name}</h3>`;
         grid.appendChild(card);
     });
 }
 
-function openModal(r) {
+// FUNGSI BARU: CHECKOUT ROOM (Berhenti Massage)
+async function checkoutRoom() {
+    if(!confirm("Hentikan sesi massage dan lanjut ke pembayaran?")) return;
+    const { error } = await _supabase.from('rooms').update({ status: 'checked_out' }).eq('id', currentRoom.id);
+    if(error) return alert("Gagal checkout: " + error.message);
+    closeModal();
+    loadRoomMap();
+}
+
+// FUNGSI BARU: EXTRA TIME
+function openExtraTimeModal() {
+    const minutes = prompt("Tambah waktu berapa menit?", "30");
+    if (minutes != null && !isNaN(minutes)) {
+        addExtraTime(parseInt(minutes));
+    }
+}
+
+async function addExtraTime(mins) {
+    const newEndTime = new Date(new Date(currentRoom.end_time).getTime() + mins * 60000).toISOString();
+    const { error } = await _supabase.from('rooms').update({ end_time: newEndTime }).eq('id', currentRoom.id);
+    if(error) return alert("Gagal tambah waktu: " + error.message);
+    alert("Waktu berhasil ditambah!");
+    closeModal();
+    loadRoomMap();
+}
+
+async function openModal(r) {
     currentRoom = r;
     document.getElementById('modal-room-name').innerText = r.name;
     document.getElementById('pos-modal').classList.remove('hidden');
-    
     const isOcc = (r.status === 'occupied');
     const isCO = (r.status === 'checked_out');
-
     document.getElementById('btn-start-massage').classList.toggle('hidden', isOcc || isCO);
     document.getElementById('btn-checkout-room').classList.toggle('hidden', !isOcc);
     document.getElementById('btn-extra-time').classList.toggle('hidden', !isOcc);
-    
     fetchActiveBill(r.id);
 }
 
@@ -255,68 +292,55 @@ async function fetchActiveBill(roomId) {
     const { data } = await _supabase.from('transaksi_spa').select('*').eq('room_id', roomId).eq('status_bayar', 'pending');
     activeOrders = data || [];
     let total = 0;
-    const container = document.getElementById('bill-items');
-    container.innerHTML = activeOrders.map(i => {
+    document.getElementById('bill-items').innerHTML = activeOrders.map(i => {
         const sub = i.harga_satuan * i.qty;
         total += sub;
-        return `<div class="bg-white p-5 rounded-3xl border-2 border-slate-100 flex justify-between items-center shadow-sm">
-            <div>
-                <div class="text-[10px] font-black uppercase text-slate-800">${i.nama_item} x${i.qty}</div>
-                <div class="text-[10px] text-slate-400 font-bold">Rp ${sub.toLocaleString()}</div>
-            </div>
-            <button onclick="cancelItem(${i.id})" class="text-red-300 hover:text-red-500 transition p-2"><i class="fa fa-trash-alt"></i></button>
+        return `<div class="bg-white p-5 rounded-3xl border-2 flex justify-between items-center shadow-sm">
+            <div><div class="text-[10px] font-black uppercase">${i.nama_item} x${i.qty}</div><div class="text-[10px] text-slate-400 font-bold">Rp ${sub.toLocaleString()}</div></div>
+            <button onclick="cancelItem(${i.id})" class="text-red-300 hover:text-red-500 p-2 transition"><i class="fa fa-trash-alt"></i></button>
         </div>`;
     }).join('');
     currentTotalBill = total;
     document.getElementById('grand-total').innerText = `Rp ${total.toLocaleString()}`;
 }
 
-async function checkoutRoom() {
-    if(!confirm("Hentikan sesi massage dan lanjut ke pembayaran?")) return;
-    const { error } = await _supabase.from('rooms').update({ status: 'checked_out' }).eq('id', currentRoom.id);
-    if(error) return alert("Error: " + error.message);
-    closeModal();
-    loadRoomMap();
+async function cancelItem(id) {
+    if(!confirm("Hapus item?")) return;
+    const { error } = await _supabase.from('transaksi_spa').delete().eq('id', id);
+    if(error) alert("Gagal hapus: " + error.message);
+    else fetchActiveBill(currentRoom.id);
 }
 
-function openExtraTimeModal() {
-    document.getElementById('extra-time-modal').classList.remove('hidden');
-}
+function openPaymentModal() {
+    if (activeOrders.length === 0) return alert("Bill kosong!");
+    const subtotal = currentTotalBill;
+    const serviceAmount = subtotal * (serviceRate / 100);
+    const discountAmount = (subtotal + serviceAmount) * (discRate / 100);
+    const taxAmount = (subtotal + serviceAmount - discountAmount) * (taxRate / 100);
+    finalAmountToPay = (subtotal + serviceAmount - discountAmount) + taxAmount;
 
-async function processExtraTime() {
-    if(!selectedExtra.tId || !selectedExtra.sName) return alert("Pilih Therapist & Paket!");
-    const baseTime = (new Date(currentRoom.end_time) > new Date()) ? new Date(currentRoom.end_time) : new Date();
-    const newEnd = new Date(baseTime.getTime() + (selectedExtra.sDur * 60000)).toISOString();
-    
-    const { error: err1 } = await _supabase.from('rooms').update({ end_time: newEnd }).eq('id', currentRoom.id);
-    const { error: err2 } = await _supabase.from('transaksi_spa').insert([{ 
-        room_id: currentRoom.id, 
-        nama_item: "[EXT] " + selectedExtra.sName, 
-        harga_satuan: selectedExtra.sPrice, 
-        qty: 1, 
-        status_bayar: 'pending', 
-        therapist_id: selectedExtra.tId, 
-        outlet_name: document.getElementById('active-outlet').value 
-    }]);
-
-    if(err1 || err2) alert("Gagal tambah waktu");
-    document.getElementById('extra-time-modal').classList.add('hidden');
-    fetchActiveBill(currentRoom.id);
+    document.getElementById('pay-subtotal').innerText = `Rp ${subtotal.toLocaleString()}`;
+    document.getElementById('pay-service').innerText = `+ Rp ${serviceAmount.toLocaleString()}`;
+    document.getElementById('pay-discount').innerText = `- Rp ${discountAmount.toLocaleString()}`;
+    document.getElementById('pay-ppn').innerText = `+ Rp ${taxAmount.toLocaleString()}`;
+    document.getElementById('pay-grand-total').innerText = `Rp ${finalAmountToPay.toLocaleString()}`;
+    document.getElementById('payment-modal').classList.remove('hidden');
 }
 
 async function finalizePayment() {
     const payAmount = parseInt(document.getElementById('input-pay-amount').value) || 0;
     if (currentPaymentMethod === 'CASH' && payAmount < finalAmountToPay) return alert("Uang Kurang!");
 
-    // Hilangkan kolom 'bank_id' jika database Anda belum siap atau jika CASH
-    const updateData = { 
+    const payload = { 
         status_bayar: 'paid', 
         metode_bayar: currentPaymentMethod,
         total_bayar: finalAmountToPay,
         waktu_bayar: new Date().toISOString()
     };
+    // Hanya masukkan bank_id jika metode bukan CASH
+    if (currentPaymentMethod !== 'CASH') payload.bank_id = selectedBankId;
 
-    const { error } = await _supabase.from('transaksi_spa').update(updateData).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
+    const { error } = await _supabase.from('transaksi_spa').update(payload).eq('room_id', currentRoom.id).eq('status_bayar', 'pending');
     if(error) return alert("Gagal Simpan: " + error.message);
 
     await _supabase.from('rooms').update({ status: 'standby', therapist_id: null, end_time: null }).eq('id', currentRoom.id);
@@ -324,12 +348,24 @@ async function finalizePayment() {
     location.reload();
 }
 
-// Fungsi pembantu lainnya tetap sama seperti kode Anda...
+function setMethod(m) {
+    currentPaymentMethod = m;
+    document.querySelectorAll('.pay-method-btn').forEach(b => b.className = "pay-method-btn p-5 border-2 rounded-2xl font-bold border-slate-200 text-slate-400");
+    const btn = document.getElementById(`btn-${m.toLowerCase().replace(/\s/g, '')}`);
+    if(btn) btn.className = "pay-method-btn p-5 border-2 rounded-2xl font-bold bg-blue-600 text-white shadow-lg";
+}
+
+function calcChange() {
+    const val = parseInt(document.getElementById('input-pay-amount').value) || 0;
+    document.getElementById('label-change').innerText = `Rp ${(val - finalAmountToPay < 0 ? 0 : val - finalAmountToPay).toLocaleString()}`;
+}
+
+function closeModal() { document.getElementById('pos-modal').classList.add('hidden'); }
+function closePicker() { document.getElementById('picker-modal').classList.add('hidden'); }
 function openPicker(type) {
     selectedPicker.type = type;
-    document.getElementById('picker-search').value = '';
     document.getElementById('picker-modal').classList.remove('hidden');
-    pickerCurrentData = ['service','service_extra'].includes(type) ? masterServices : (type === 'product' ? masterProducts : masterTherapists);
+    pickerCurrentData = type === 'service' ? masterServices : (type === 'product' ? masterProducts : masterTherapists);
     renderPickerTable(pickerCurrentData);
 }
 
@@ -341,14 +377,12 @@ function renderPickerTable(data) {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-blue-50 cursor-pointer";
         tr.onclick = () => {
-            const type = selectedPicker.type;
-            if(type==='staff_handle') { selectedStaffHandleId=item.t_id; document.getElementById('label-staff-handle').innerText=name; }
-            if(type==='therapist') { selectedPicker.tId=item.t_id; document.getElementById('label-therapist').innerText=name; }
-            if(type==='service') { selectedPicker.sName=name; selectedPicker.sPrice=price; selectedPicker.sDur=item.duration_minutes; document.getElementById('label-service').innerText=name; }
-            if(type==='product') { selectedPicker.pName=name; selectedPicker.pPrice=price; document.getElementById('label-product').innerText=name; }
-            if(type==='therapist_seller') { selectedSellerId=item.t_id; document.getElementById('label-seller').innerText=name; }
-            if(type==='therapist_extra') { selectedExtra.tId=item.t_id; document.getElementById('label-therapist-extra').innerText=name; }
-            if(type==='service_extra') { selectedExtra.sName=name; selectedExtra.sPrice=price; selectedExtra.sDur=item.duration_minutes; document.getElementById('label-service-extra').innerText=name; }
+            const t = selectedPicker.type;
+            if(t==='staff_handle') { selectedStaffHandleId=item.t_id; document.getElementById('label-staff-handle').innerText=name; }
+            if(t==='therapist') { selectedPicker.tId=item.t_id; document.getElementById('label-therapist').innerText=name; }
+            if(t==='service') { selectedPicker.sName=name; selectedPicker.sPrice=price; selectedPicker.sDur=item.duration_minutes; document.getElementById('label-service').innerText=name; }
+            if(t==='product') { selectedPicker.pName=name; selectedPicker.pPrice=price; document.getElementById('label-product').innerText=name; }
+            if(t==='therapist_seller') { selectedSellerId=item.t_id; document.getElementById('label-seller').innerText=name; }
             closePicker();
         };
         tr.innerHTML = `<td class="p-5 uppercase text-sm">${name}</td><td class="p-5 text-right">Rp ${price.toLocaleString()}</td>`;
@@ -356,8 +390,21 @@ function renderPickerTable(data) {
     });
 }
 
-function closeModal() { document.getElementById('pos-modal').classList.add('hidden'); }
-function closePicker() { document.getElementById('picker-modal').classList.add('hidden'); }
+async function startSession() {
+    if(!selectedStaffHandleId || !selectedPicker.tId) return alert("Lengkapi Data!");
+    const guest = document.getElementById('input-guest-name').value || "GUEST";
+    const endTime = new Date(Date.now() + (selectedPicker.sDur * 60000)).toISOString();
+    await _supabase.from('rooms').update({ status: 'occupied', therapist_id: selectedPicker.tId, end_time: endTime }).eq('id', currentRoom.id);
+    await _supabase.from('transaksi_spa').insert([{ room_id: currentRoom.id, nama_item: selectedPicker.sName, harga_satuan: selectedPicker.sPrice, qty: 1, status_bayar: 'pending', therapist_id: selectedPicker.tId, staff_handle_id: selectedStaffHandleId, customer_name: guest, outlet_name: document.getElementById('active-outlet').value }]);
+    closeModal(); loadRoomMap();
+}
+
+async function addToBill() {
+    if(!selectedPicker.pName || !selectedSellerId) return alert("Pilih Produk & Staff!");
+    const qty = parseInt(document.getElementById('input-qty').value);
+    await _supabase.from('transaksi_spa').insert([{ room_id: currentRoom.id, nama_item: selectedPicker.pName, harga_satuan: selectedPicker.pPrice, qty: qty, status_bayar: 'pending', therapist_id: selectedSellerId, outlet_name: document.getElementById('active-outlet').value }]);
+    fetchActiveBill(currentRoom.id);
+}
 
 init();
     </script>
