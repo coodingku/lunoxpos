@@ -3,91 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LUNOX - Full Business Reports</title>
+    <title>LUNOX - Detail Business Reports</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f1f5f9; }
-        .card-shadow { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02); }
-        @media print { .no-print { display: none !important; } }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8fafc; color: #1e293b; }
+        .report-card { background: white; border-radius: 2rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; }
+        @media print { .no-print { display: none !important; } body { background: white; p: 0; } }
     </style>
 </head>
-<body class="p-8">
+<body class="p-4 md:p-8">
 
     <div class="max-w-7xl mx-auto">
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4 no-print">
             <div>
-                <h1 class="text-3xl font-black italic tracking-tighter text-slate-800 uppercase">Business <span class="text-blue-600">Report</span></h1>
-                <p class="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Laporan Payroll & Detail Waktu Check-in/Out</p>
+                <h1 class="text-3xl font-black italic tracking-tighter uppercase">Operational <span class="text-blue-600">Report</span></h1>
+                <p class="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Service Duration & F&B Sales Analysis</p>
             </div>
             
-            <div class="flex gap-3 bg-white p-2 rounded-[2rem] shadow-sm border no-print">
+            <div class="flex gap-3 bg-white p-2 rounded-full shadow-sm border">
                 <input type="date" id="date-start" class="bg-transparent px-4 py-2 text-xs font-bold outline-none">
-                <span class="flex items-center text-slate-300">-</span>
                 <input type="date" id="date-end" class="bg-transparent px-4 py-2 text-xs font-bold outline-none">
                 <button onclick="loadReport()" class="bg-blue-600 text-white px-6 py-2 rounded-full text-xs font-black uppercase hover:bg-black transition">Filter</button>
-                <button onclick="window.print()" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-full text-xs font-black uppercase hover:bg-slate-200 transition"><i class="fa fa-print"></i></button>
+                <button onclick="window.print()" class="bg-slate-100 text-slate-600 px-4 py-2 rounded-full text-xs font-black"><i class="fa fa-print"></i></button>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-            <div class="bg-white p-6 rounded-[2rem] card-shadow border border-slate-100">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Omzet Room</p>
-                <h2 id="total-omzet" class="text-2xl font-black text-slate-800">Rp 0</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="bg-white p-6 rounded-[2rem] border border-slate-200">
+                <p class="text-[10px] font-black text-slate-400 uppercase mb-1 text-center font-bold italic tracking-widest">Revenue Service</p>
+                <h2 id="total-rev-svc" class="text-2xl font-black text-blue-600 text-center">Rp 0</h2>
             </div>
-            <div class="bg-white p-6 rounded-[2rem] card-shadow border border-slate-100">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Penjualan Produk</p>
-                <h2 id="total-omzet-produk" class="text-2xl font-black text-orange-600">Rp 0</h2>
+            <div class="bg-white p-6 rounded-[2rem] border border-slate-200">
+                <p class="text-[10px] font-black text-slate-400 uppercase mb-1 text-center font-bold italic tracking-widest">Revenue F&B</p>
+                <h2 id="total-rev-fb" class="text-2xl font-black text-orange-600 text-center">Rp 0</h2>
             </div>
-            <div class="bg-blue-600 p-6 rounded-[2rem] card-shadow text-white">
-                <p class="text-[10px] font-black opacity-60 uppercase tracking-widest mb-1">Total Komisi Staff</p>
-                <h2 id="total-komisi" class="text-2xl font-black">Rp 0</h2>
-            </div>
-            <div class="bg-slate-900 p-6 rounded-[2rem] card-shadow text-white">
-                <p class="text-[10px] font-black opacity-60 uppercase tracking-widest mb-1">Profit Bersih (Estimasi)</p>
-                <h2 id="total-profit" class="text-2xl font-black text-emerald-400">Rp 0</h2>
+            <div class="bg-slate-900 p-6 rounded-[2rem] text-white">
+                <p class="text-[10px] font-black opacity-60 uppercase mb-1 text-center font-bold italic tracking-widest">Total Net Sales</p>
+                <h2 id="total-net" class="text-2xl font-black text-emerald-400 text-center">Rp 0</h2>
             </div>
         </div>
 
-        <div class="mb-12">
-            <h3 class="text-sm font-black uppercase mb-4 flex items-center gap-2 text-slate-500">
-                <i class="fa fa-clock text-blue-600"></i> Detail Kerja & Komisi Therapist
+        <section class="mb-12">
+            <h3 class="text-sm font-black uppercase mb-4 flex items-center gap-2 text-slate-600 italic">
+                <i class="fa fa-clock text-blue-600"></i> Laporan Aktivitas Therapist & Durasi Service
             </h3>
-            <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-                <table class="w-full text-left">
+            <div class="report-card">
+                <table class="w-full text-left text-xs">
                     <thead>
-                        <tr class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
+                        <tr class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-tighter border-b">
                             <th class="p-5">Therapist</th>
-                            <th class="p-5">Item Service</th>
-                            <th class="p-5">Check In</th>
-                            <th class="p-5">Check Out</th>
-                            <th class="p-5 text-right">Komisi</th>
+                            <th class="p-5">Room</th>
+                            <th class="p-5">Service</th>
+                            <th class="p-5 text-center">Check In</th>
+                            <th class="p-5 text-center">Check Out</th>
+                            <th class="p-5 text-center">Durasi Asli</th>
+                            <th class="p-5 text-center bg-red-50 text-red-500 italic">Sisa/Kurang (Menit)</th>
                         </tr>
                     </thead>
-                    <tbody id="therapist-table" class="font-bold text-slate-700 text-sm"></tbody>
+                    <tbody id="service-table-body" class="divide-y font-bold"></tbody>
                 </table>
             </div>
-        </div>
+        </section>
 
-        <div class="mb-12">
-            <h3 class="text-sm font-black uppercase mb-4 flex items-center gap-2 text-slate-500">
-                <i class="fa fa-user-tie text-emerald-600"></i> Penjualan Room Oleh Staff (Handle)
+        <section>
+            <h3 class="text-sm font-black uppercase mb-4 flex items-center gap-2 text-slate-600 italic">
+                <i class="fa fa-utensils text-orange-600"></i> Laporan Penjualan Produk & F&B
             </h3>
-            <div class="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-                <table class="w-full text-left">
+            <div class="report-card">
+                <table class="w-full text-left text-xs">
                     <thead>
-                        <tr class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b">
-                            <th class="p-5">Nama Staff</th>
-                            <th class="p-5 text-center">Tamu</th>
-                            <th class="p-5 text-right">Total Transaksi</th>
+                        <tr class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-tighter border-b">
+                            <th class="p-5">Nama Item</th>
+                            <th class="p-5 text-center">Quantity</th>
+                            <th class="p-5 text-right">Harga Satuan</th>
+                            <th class="p-5 text-right">Subtotal</th>
                         </tr>
                     </thead>
-                    <tbody id="staff-table" class="font-bold text-slate-700 text-sm"></tbody>
+                    <tbody id="fb-table-body" class="divide-y font-bold"></tbody>
                 </table>
             </div>
-        </div>
+        </section>
     </div>
 
     <script>
@@ -98,11 +96,12 @@
         document.getElementById('date-start').value = new Date().toISOString().split('T')[0];
         document.getElementById('date-end').value = new Date().toISOString().split('T')[0];
 
-        // Fungsi format jam (HH:mm)
-        function formatTime(isoString) {
-            if (!isoString) return "-";
-            const d = new Date(isoString);
-            return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        function formatTime(iso) { return iso ? new Date(iso).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'}) : '-'; }
+
+        // Fungsi Deteksi Menit dari Nama Service (Contoh: "Massage 90 Menit" -> 90)
+        function extractDuration(serviceName) {
+            const matches = serviceName.match(/\d+/);
+            return matches ? parseInt(matches[0]) : 0;
         }
 
         async function loadReport() {
@@ -112,69 +111,62 @@
             const { data: allStaff } = await _supabase.from('therapists').select('*');
             const { data: allProducts } = await _supabase.from('produk').select('*');
             const { data: trans } = await _supabase.from('transaksi_spa')
-                .select('*')
-                .eq('status_bayar', 'completed')
-                .gte('checkout_at', start)
-                .lte('checkout_at', end)
-                .order('checkout_at', { ascending: true });
+                .select('*').eq('status_bayar', 'completed').gte('checkout_at', start).lte('checkout_at', end);
 
-            if (!trans) return;
+            if(!trans) return;
 
-            let thpTable = '';
-            let grandTotalKomisi = 0;
-            let grandTotalOmzetRoom = 0;
-            let grandTotalProduk = 0;
+            let svcHtml = '', fbHtml = '';
+            let revSvc = 0, revFb = 0;
 
-            // 1. PROSES DATA THERAPIST DENGAN DETAIL JAM
-            trans.filter(t => t.therapist_id).forEach(t => {
-                const sInfo = allStaff.find(st => st.t_id === t.therapist_id);
-                let com = t.commission_type === 'percentage' ? (t.harga_satuan * t.qty) * (t.commission_value / 100) : t.commission_value * t.qty;
-                
-                grandTotalKomisi += com;
-                grandTotalOmzetRoom += (t.harga_satuan * t.qty);
-
-                thpTable += `
-                    <tr class="border-b hover:bg-slate-50 transition">
-                        <td class="p-5">
-                            <span class="uppercase italic font-black">${sInfo ? sInfo.name : 'N/A'}</span>
-                        </td>
-                        <td class="p-5 text-slate-500">${t.nama_item}</td>
-                        <td class="p-5"><span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px]">${formatTime(t.created_at)}</span></td>
-                        <td class="p-5"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px]">${formatTime(t.checkout_at)}</span></td>
-                        <td class="p-5 text-right text-emerald-600 font-black">Rp ${com.toLocaleString()}</td>
-                    </tr>
-                `;
-            });
-
-            // 2. PROSES STAFF HANDLE
-            let staffTable = '';
-            const staffList = {};
             trans.forEach(t => {
-                if(t.staff_handle_id) {
-                    if(!staffList[t.staff_handle_id]) staffList[t.staff_handle_id] = { count: 0, total: 0 };
-                    staffList[t.staff_handle_id].count++;
-                    staffList[t.staff_handle_id].total += (t.harga_satuan * t.qty);
+                const isProduct = allProducts.some(p => p.nama_produk === t.nama_item);
+                const subtotal = t.harga_satuan * t.qty;
+
+                if (!isProduct) {
+                    // SEKSI SERVICE
+                    revSvc += subtotal;
+                    const thName = allStaff.find(s => s.t_id === t.therapist_id)?.name || 'N/A';
+                    
+                    // Hitung Selisih Waktu
+                    const cin = new Date(t.created_at);
+                    const cout = new Date(t.checkout_at);
+                    const diffMinutes = Math.floor((cout - cin) / 60000);
+                    const targetDur = extractDuration(t.nama_item);
+                    const sisa = targetDur - diffMinutes;
+
+                    svcHtml += `
+                        <tr class="hover:bg-slate-50 transition text-slate-700">
+                            <td class="p-5 uppercase font-black italic text-blue-600">${thName}</td>
+                            <td class="p-5 uppercase">${t.room_name || '-'}</td>
+                            <td class="p-5">${t.nama_item}</td>
+                            <td class="p-5 text-center font-mono">${formatTime(t.created_at)}</td>
+                            <td class="p-5 text-center font-mono">${formatTime(t.checkout_at)}</td>
+                            <td class="p-5 text-center">${diffMinutes} Min</td>
+                            <td class="p-5 text-center ${sisa > 0 ? 'bg-red-50 text-red-600' : 'text-slate-300'}">
+                                ${sisa > 0 ? `<i class="fa fa-arrow-down mr-1"></i>${sisa}` : 'OK'}
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    // SEKSI F&B
+                    revFb += subtotal;
+                    fbHtml += `
+                        <tr class="hover:bg-slate-50 transition text-slate-700">
+                            <td class="p-5 uppercase">${t.nama_item}</td>
+                            <td class="p-5 text-center font-black">${t.qty}</td>
+                            <td class="p-5 text-right font-mono text-slate-400">Rp ${t.harga_satuan.toLocaleString()}</td>
+                            <td class="p-5 text-right font-black text-orange-600">Rp ${subtotal.toLocaleString()}</td>
+                        </tr>
+                    `;
                 }
             });
 
-            Object.entries(staffList).forEach(([id, val]) => {
-                const sInfo = allStaff.find(st => st.t_id === id);
-                staffTable += `<tr class="border-b"><td class="p-5 uppercase italic font-bold">${sInfo ? sInfo.name : 'Unknown'}</td><td class="p-5 text-center">${val.count} Tamu</td><td class="p-5 text-right font-black">Rp ${val.total.toLocaleString()}</td></tr>`;
-            });
-
-            // 3. PROSES PRODUK
-            trans.forEach(t => {
-                const isProd = allProducts.some(p => p.nama_produk === t.nama_item);
-                if(isProd) grandTotalProduk += (t.harga_satuan * t.qty);
-            });
-
-            document.getElementById('therapist-table').innerHTML = thpTable || '<tr><td colspan="5" class="p-10 text-center opacity-50">Tidak ada aktivitas therapist</td></tr>';
-            document.getElementById('staff-table').innerHTML = staffTable || '<tr><td colspan="3" class="p-10 text-center opacity-50">Tidak ada data handle</td></tr>';
+            document.getElementById('service-table-body').innerHTML = svcHtml || '<tr><td colspan="7" class="p-10 text-center">No service data</td></tr>';
+            document.getElementById('fb-table-body').innerHTML = fbHtml || '<tr><td colspan="4" class="p-10 text-center">No product data</td></tr>';
             
-            document.getElementById('total-omzet').innerText = `Rp ${grandTotalOmzetRoom.toLocaleString()}`;
-            document.getElementById('total-omzet-produk').innerText = `Rp ${grandTotalProduk.toLocaleString()}`;
-            document.getElementById('total-komisi').innerText = `Rp ${grandTotalKomisi.toLocaleString()}`;
-            document.getElementById('total-profit').innerText = `Rp ${((grandTotalOmzetRoom + grandTotalProduk) - grandTotalKomisi).toLocaleString()}`;
+            document.getElementById('total-rev-svc').innerText = `Rp ${revSvc.toLocaleString()}`;
+            document.getElementById('total-rev-fb').innerText = `Rp ${revFb.toLocaleString()}`;
+            document.getElementById('total-net').innerText = `Rp ${(revSvc + revFb).toLocaleString()}`;
         }
 
         loadReport();
